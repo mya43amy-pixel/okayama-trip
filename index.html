@@ -3,477 +3,423 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 Okayama Trip 🍑</title>
+    <title>2026 Okayama Trip 🍑 V4</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     
     <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-database-compat.js"></script>
+    
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        :root {
-            --primary-pink: #A66B6B;
-            --bg-light: #F8F4F4;
-        }
-        body {
-            font-family: 'Montserrat', 'Noto Sans TC', sans-serif;
-            background-color: var(--bg-light);
-            color: #4A4A4A;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .date-tab-active {
-            background-color: white;
-            color: var(--primary-pink);
-            box-shadow: 0 4px 12px rgba(166, 107, 107, 0.15);
-        }
-        .bottom-nav-active { color: var(--primary-pink); font-weight: 700; }
-        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
-        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(8px); }
-        .item-drag-handle { cursor: grab; padding: 10px; }
-        .item-drag-handle:active { cursor: grabbing; }
-        
-        /* 針對四天行程加寬日期 */
-        .date-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            width: 100%;
-        }
+        :root { --main-color: #B06A6A; --main-light: #C88D8D; --bg-color: #F7F9F9; }
+        body { font-family: 'PingFang TC', 'SF Pro Text', sans-serif; background-color: var(--bg-color); color: #333; -webkit-tap-highlight-color: transparent; }
+        .rose-bg { background-color: var(--main-color); }
+        .rose-text { color: var(--main-color); }
+        [v-cloak] { display: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .modal-enter-active, .modal-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
+        .modal-enter-from, .modal-leave-to { opacity: 0; transform: translateY(20px); }
+        .active-scale:active { transform: scale(0.98); }
+        .input-style { width: 100%; background: #F8F9FA; border: 1px solid #E9ECEF; border-radius: 12px; padding: 12px 16px; font-size: 14px; outline: none; transition: border 0.2s; }
+        .input-style:focus { border-color: var(--main-color); }
     </style>
 </head>
-<body class="max-w-md mx-auto min-h-screen relative pb-32">
-    <div id="app" v-cloak>
-        <header class="bg-[#A66B6B] pt-8 pb-16 rounded-b-[40px] px-6 text-white text-center">
-            <h1 class="text-xl tracking-[0.2em] font-light mb-6">2026 OKAYAMA</h1>
-            <div class="date-grid">
-                <div v-for="day in days" :key="day.date" 
-                     @click="currentDate = day.date"
-                     class="flex flex-col items-center py-3 rounded-[24px] transition-all duration-300"
-                     :class="currentDate === day.date ? 'date-tab-active' : 'bg-white/20 text-white/80'">
-                    <span class="text-lg font-bold">{{ day.day }}</span>
-                    <span class="text-xs opacity-70 uppercase">{{ day.week }}</span>
-                </div>
+<body>
+    <div id="app" v-cloak class="max-w-md mx-auto min-h-screen relative shadow-2xl bg-[#F7F9F9] pb-24">
+        
+        <header class="rose-bg pt-10 pb-6 px-4 rounded-b-[35px] shadow-sm sticky top-0 z-40">
+            <h1 class="text-center text-white text-sm font-bold tracking-[0.3em] mb-4 uppercase">2026 okayama</h1>
+            <div class="grid grid-cols-4 gap-2 px-2">
+                <button v-for="(d, i) in dates" :key="i" @click="selectedDay = i"
+                    class="h-16 rounded-[20px] flex flex-col items-center justify-center transition-all duration-300"
+                    :class="selectedDay === i ? 'bg-white rose-text shadow-md scale-105' : 'bg-white/20 text-white'">
+                    <span class="text-lg font-bold leading-none">{{ d.date }}</span>
+                    <span class="text-[10px] mt-1 opacity-90">{{ d.day }}</span>
+                </button>
             </div>
         </header>
 
-        <main class="px-5 -mt-8">
-            <div v-if="activeTab === 'plan'" class="space-y-4">
-                <div v-if="!currentDayPlans.length" class="text-center py-12 text-gray-400">尚無行程 ✨</div>
-                <div v-for="(plan, index) in currentDayPlans" :key="plan.id" class="bg-white rounded-3xl p-5 shadow-sm border border-gray-50 flex items-start space-x-4">
-                    <div class="flex flex-col items-center">
-                        <span class="text-[#A66B6B] font-bold">{{ plan.time }}</span>
-                        <div v-if="index !== currentDayPlans.length - 1" class="w-px h-12 bg-gray-100 my-2"></div>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex justify-between">
-                            <h3 class="font-bold text-lg text-gray-800">{{ plan.location }}</h3>
-                            <button @click="deleteItem('plans', plan.id)" class="text-gray-300 text-xs"><i class="fas fa-times"></i></button>
+        <main class="px-5 pt-4">
+            <div v-show="activeTab === 'plan'" id="plan-content" class="space-y-4 animate-fade-in bg-[#F7F9F9] pb-4">
+                <div class="bg-[#EAEAEA]/50 rounded-2xl p-3 text-center active-scale cursor-pointer" @click="editSummary">
+                    <span class="text-sm font-medium text-gray-500">{{ dailySummary[selectedDay] || '點擊新增今日概要 ✨' }}</span>
+                </div>
+
+                <div v-for="(item, index) in currentPlanList" :key="item.id" 
+                     class="bg-white rounded-[24px] p-5 shadow-sm relative active-scale"
+                     @click="openPlanModal(item, index)">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-[#8FC4C4] font-bold text-sm bg-[#EAF4F4] px-3 py-1 rounded-full">{{ item.time || '00:00' }}</span>
+                        <div v-if="item.duration" class="ml-auto text-[11px] text-gray-400 bg-gray-50 px-2 py-1 rounded-md flex items-center gap-1">
+                            <i class="far fa-clock"></i> {{ item.duration }}
                         </div>
-                        <p class="text-gray-400 text-sm mt-1">{{ plan.note }}</p>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800">{{ item.place }}</h3>
+                    <p v-if="item.memo" class="text-xs text-gray-400 mt-1.5 leading-relaxed">{{ item.memo }}</p>
+                    
+                    <div v-if="item.transport" class="mt-4 flex items-center justify-between text-xs text-gray-400 border-t border-gray-50 pt-3">
+                        <div class="flex items-center gap-2">
+                            <i :class="transportIcons[item.transport]"></i>
+                            <span>{{ item.transportTime }}</span>
+                        </div>
+                        <a v-if="item.link" :href="item.link" target="_blank" @click.stop class="w-6 h-6 bg-[#A66B6B]/10 rounded-full flex items-center justify-center text-[#A66B6B]">
+                            <i class="fas fa-location-arrow text-[10px]"></i>
+                        </a>
                     </div>
                 </div>
-                <button @click="openModal('plan')" class="w-full py-4 border-2 border-dashed border-[#A66B6B]/30 rounded-3xl text-[#A66B6B] font-medium">+ 新增行程</button>
+
+                <button @click="openPlanModal()" class="w-full py-4 mt-2 border-2 border-dashed border-[#B06A6A]/30 text-[#B06A6A] font-bold text-sm rounded-full">+ 新增行程</button>
             </div>
 
-            <div v-if="activeTab === 'wallet'" class="space-y-4">
-                <div class="bg-[#A66B6B] rounded-[32px] p-6 text-white shadow-lg space-y-6">
-                    <div class="text-center">
-                        <p class="text-xs opacity-80 mb-1 tracking-widest">TOTAL SPENT</p>
-                        <h2 class="text-4xl font-bold">¥ {{ formatNumber(totalSpentJPY) }}</h2>
-                        <p class="text-sm opacity-90 mt-1">≈ NT$ {{ formatNumber(totalSpentTWD) }}</p>
+            <div v-show="activeTab === 'wallet'" class="space-y-4 animate-fade-in">
+                <div class="rose-bg rounded-[30px] p-6 text-white shadow-md relative overflow-hidden">
+                    <div class="text-center mb-5">
+                        <p class="text-[10px] tracking-widest opacity-80 uppercase mb-1">Total Spent</p>
+                        <h2 class="text-3xl font-bold flex justify-center items-baseline gap-1">
+                            <span class="text-lg">¥</span>{{ formatNum(totalJPY) }}
+                        </h2>
+                        <p class="text-xs opacity-70 mt-1">≈ NT$ {{ formatNum(totalTWD) }}</p>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-black/10 rounded-2xl p-4 border border-white/10">
-                            <p class="text-[10px] opacity-70 mb-1">行前支出</p>
-                            <p class="font-bold">¥ {{ formatNumber(beforeTripTotal) }}</p>
-                            <p class="text-[10px] opacity-60">≈ NT$ {{ formatNumber(beforeTripTotalTWD) }}</p>
+                    <div class="flex gap-3">
+                        <div class="flex-1 bg-white/20 rounded-2xl p-3 backdrop-blur-sm">
+                            <p class="opacity-80 text-[10px] mb-1">行前支出</p>
+                            <p class="font-bold text-xs">¥ {{ formatNum(preTripSpent) }}</p>
+                            <p class="text-[9px] opacity-60">NT$ {{ formatNum(preTripSpentTWD) }}</p>
                         </div>
-                        <div class="bg-black/10 rounded-2xl p-4 border border-white/10">
-                            <p class="text-[10px] opacity-70 mb-1">實際支出</p>
-                            <p class="font-bold">¥ {{ formatNumber(actualSpentTotal) }}</p>
-                            <p class="text-[10px] opacity-60">≈ NT$ {{ formatNumber(actualSpentTotalTWD) }}</p>
+                        <div class="flex-1 bg-white/20 rounded-2xl p-3 backdrop-blur-sm">
+                            <p class="opacity-80 text-[10px] mb-1">實際支出</p>
+                            <p class="font-bold text-xs">¥ {{ formatNum(actualSpent) }}</p>
+                            <p class="text-[9px] opacity-60">NT$ {{ formatNum(actualSpentTWD) }}</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="space-y-3">
-                    <div v-for="(record, index) in filteredRecords" :key="record.id" 
-                         class="bg-white rounded-2xl p-4 flex items-center justify-between shadow-sm border border-gray-50 group">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-[#F8F4F4] rounded-xl flex items-center justify-center text-[#A66B6B]">
-                                <i :class="getCategoryIcon(record.category)"></i>
+                <div class="space-y-2">
+                    <div v-for="(item, index) in walletList" :key="item.id" 
+                         class="bg-white rounded-2xl p-4 shadow-sm flex items-center justify-between active-scale group">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-[#F8F9FA] flex items-center justify-center text-[#B06A6A]">
+                                <i :class="categoryIcons[item.category] || 'fas fa-tag'"></i>
                             </div>
-                            <div>
-                                <h4 class="font-bold text-gray-800">{{ record.name }}</h4>
-                                <div class="flex items-center space-x-2 text-[10px] text-gray-400">
-                                    <span class="bg-gray-100 px-2 py-0.5 rounded">{{ record.paymentMethod }}</span>
-                                    <span class="bg-[#A66B6B]/10 text-[#A66B6B] px-2 py-0.5 rounded">{{ record.type }}</span>
+                            <div @click="openWalletModal(item)">
+                                <h4 class="text-sm font-bold text-gray-800">{{ item.name }}</h4>
+                                <div class="flex gap-2 text-[10px] text-gray-400 mt-1 font-medium">
+                                    <span class="bg-gray-50 px-1.5 py-0.5 rounded">{{ item.method }}</span>
+                                    <span class="bg-gray-50 px-1.5 py-0.5 rounded">{{ item.tag }}</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="text-right flex items-center">
-                            <div class="mr-4">
-                                <p class="font-bold text-gray-800" :class="record.isIncome ? 'text-green-500' : ''">
-                                    {{ record.isIncome ? '+' : '-' }} ¥{{ formatNumber(record.amount) }}
+                        <div class="flex items-center gap-3">
+                            <div class="text-right" @click="openWalletModal(item)">
+                                <p class="text-sm font-bold text-gray-800" :class="item.type === '收入' ? 'text-green-500' : ''">
+                                    {{ item.type === '支出' ? '-' : '+' }} ¥{{ formatNum(item.amount) }}
                                 </p>
-                                <p class="text-[10px] text-gray-400">≈ NT$ {{ formatNumber(record.twdAmount) }}</p>
+                                <p class="text-[10px] text-gray-400">NT$ {{ formatNum(item.twdAmount || Math.round(item.amount * exchangeRate)) }}</p>
                             </div>
-                            <div class="flex flex-col space-y-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button @click="moveRecord(index, -1)" class="text-gray-300 hover:text-[#A66B6B]"><i class="fas fa-chevron-up"></i></button>
-                                <button @click="moveRecord(index, 1)" class="text-gray-300 hover:text-[#A66B6B]"><i class="fas fa-chevron-down"></i></button>
+                            <div class="flex flex-col text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button @click="reorder('walletList', index, -1)"><i class="fas fa-caret-up"></i></button>
+                                <button @click="reorder('walletList', index, 1)"><i class="fas fa-caret-down"></i></button>
                             </div>
-                            <button @click="deleteItem('records', record.id)" class="ml-2 text-gray-200 text-xs"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 </div>
-                <button @click="openModal('wallet')" class="fixed bottom-24 right-6 w-14 h-14 bg-[#A66B6B] text-white rounded-full shadow-xl flex items-center justify-center text-2xl z-40">
-                    <i class="fas fa-plus"></i>
-                </button>
+
+                <button @click="openWalletModal()" class="fixed bottom-24 right-5 w-14 h-14 rose-bg text-white rounded-full shadow-lg flex items-center justify-center text-xl z-30"><i class="fas fa-plus"></i></button>
             </div>
 
-            <div v-if="activeTab === 'shop'" class="space-y-8">
+            <div v-show="activeTab === 'shop'" class="space-y-6 animate-fade-in pb-10">
                 <section>
-                    <h3 class="text-xs tracking-widest text-gray-400 mb-4 font-bold uppercase">Shopping List</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div v-for="(item, index) in shoppingList" :key="item.id" 
-                             class="bg-white rounded-[28px] overflow-hidden shadow-sm border border-gray-100 relative group">
-                            <div class="aspect-square bg-gray-50 flex items-center justify-center relative overflow-hidden">
+                    <h3 class="text-xs font-bold text-gray-500 tracking-widest mb-3 uppercase">Shopping List</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div v-for="(item, index) in sortedShopList" :key="item.id" 
+                             class="bg-white rounded-[24px] overflow-hidden shadow-sm relative group">
+                            <div class="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
                                 <img v-if="item.image" :src="item.image" class="w-full h-full object-cover">
-                                <i v-else class="fas fa-camera text-gray-200 text-2xl"></i>
-                                <div class="absolute top-3 right-3">
-                                    <input type="checkbox" v-model="item.checked" @change="updateItem('shoppingList', item)" class="w-5 h-5 rounded-full border-gray-300 text-[#A66B6B] focus:ring-[#A66B6B]">
+                                <i v-else class="fas fa-camera text-gray-200 text-3xl"></i>
+                                <div class="absolute top-3 right-3 z-10">
+                                    <button @click="toggleShopStatus(item)" class="w-6 h-6 rounded-full border-2 flex items-center justify-center"
+                                            :class="item.checked ? 'bg-[#B06A6A] border-[#B06A6A] text-white' : 'bg-white/80 border-gray-200 text-transparent'">
+                                        <i class="fas fa-check text-[10px]"></i>
+                                    </button>
                                 </div>
                             </div>
-                            <div class="p-4">
-                                <h4 class="font-bold text-sm truncate">{{ item.name }}</h4>
+                            <div class="p-3 cursor-pointer" @click="openShopModal(item)">
+                                <p class="text-sm font-bold text-gray-800 truncate">{{ item.name }}</p>
                                 <div class="flex justify-between items-center mt-1">
-                                    <span class="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded">{{ item.category }}</span>
-                                    <div class="flex space-x-2 opacity-0 group-hover:opacity-100">
-                                        <button @click="moveShopItem(index, -1)" class="text-xs text-gray-300"><i class="fas fa-arrow-left"></i></button>
-                                        <button @click="moveShopItem(index, 1)" class="text-xs text-gray-300"><i class="fas fa-arrow-right"></i></button>
+                                    <span class="text-[9px] text-[#B06A6A] bg-red-50 px-2 py-0.5 rounded-lg">{{ item.category }}</span>
+                                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 text-gray-300">
+                                        <button @click.stop="reorder('shopList', index, -1)"><i class="fas fa-chevron-left text-[10px]"></i></button>
+                                        <button @click.stop="reorder('shopList', index, 1)"><i class="fas fa-chevron-right text-[10px]"></i></button>
                                     </div>
                                 </div>
                             </div>
-                            <button @click="deleteItem('shoppingList', item.id)" class="absolute bottom-4 right-4 text-gray-200 text-[10px]"><i class="fas fa-trash"></i></button>
                         </div>
+                        <button @click="openShopModal()" class="aspect-square border-2 border-dashed border-gray-200 rounded-[24px] flex flex-col items-center justify-center text-gray-300 gap-2">
+                            <i class="fas fa-plus"></i><span class="text-xs">新增</span>
+                        </button>
                     </div>
-                    <button @click="openModal('shop')" class="w-full mt-4 py-4 border-2 border-dashed border-[#A66B6B]/30 rounded-3xl text-[#A66B6B] font-medium">+ 新增待買</button>
                 </section>
 
                 <section>
-                    <h3 class="text-xs tracking-widest text-gray-400 mb-4 font-bold uppercase">Memo / Links</h3>
+                    <h3 class="text-xs font-bold text-gray-500 tracking-widest mb-3 uppercase">Memo / Links</h3>
                     <div class="space-y-3">
-                        <div v-for="(memo, index) in memos" :key="memo.id" class="bg-white rounded-2xl p-4 shadow-sm group">
-                            <div class="flex justify-between items-start">
-                                <div class="flex-1">
-                                    <p class="text-sm text-gray-700 leading-relaxed">{{ memo.content }}</p>
-                                    <div v-if="memo.link" class="mt-2 flex items-center">
-                                        <a :href="memo.link" target="_blank" class="flex items-center space-x-2 text-[#A66B6B] text-xs font-bold bg-[#A66B6B]/5 px-3 py-1.5 rounded-full">
-                                            <i class="fas fa-link"></i>
-                                            <span>開啟連結</span>
-                                        </a>
-                                    </div>
+                        <div v-for="(m, index) in sortedMemoList" :key="m.id" class="bg-white rounded-2xl p-4 shadow-sm relative group">
+                            <div class="flex justify-between items-start pr-8">
+                                <div class="flex-1" @click="openMemoModal(m)">
+                                    <p class="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{{ m.text }}</p>
                                 </div>
-                                <div class="flex flex-col space-y-2 ml-4">
-                                    <button @click="deleteItem('memos', memo.id)" class="text-gray-200 text-xs"><i class="fas fa-times"></i></button>
-                                    <div class="flex flex-col opacity-0 group-hover:opacity-100">
-                                        <button @click="moveMemo(index, -1)" class="text-gray-300"><i class="fas fa-sort-up"></i></button>
-                                        <button @click="moveMemo(index, 1)" class="text-gray-300"><i class="fas fa-sort-down"></i></button>
-                                    </div>
-                                </div>
+                                <a v-if="m.link" :href="m.link" target="_blank" class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-[#B06A6A] shrink-0">
+                                    <i class="fas fa-link text-xs"></i>
+                                </a>
+                            </div>
+                            <div class="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col opacity-0 group-hover:opacity-100 text-gray-200">
+                                <button @click="reorder('memoList', index, -1)"><i class="fas fa-caret-up"></i></button>
+                                <button @click="reorder('memoList', index, 1)"><i class="fas fa-caret-down"></i></button>
                             </div>
                         </div>
-                        <button @click="openModal('memo')" class="w-full py-4 bg-white/50 border border-gray-100 rounded-3xl text-gray-400 text-sm">+ 新增 MEMO</button>
                     </div>
+                    <button @click="openMemoModal()" class="w-full py-4 mt-2 bg-white text-gray-400 border border-gray-100 font-bold text-sm rounded-full">+ 新增 MEMO</button>
                 </section>
             </div>
         </main>
 
-        <transition name="fade">
-            <div v-if="modal.show" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-                <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeModal"></div>
-                <div class="relative bg-white w-full max-w-md rounded-[40px] p-8 shadow-2xl animate-slide-up">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-bold text-gray-800">{{ modal.title }} 💰</h2>
-                        <button @click="closeModal" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+        <nav class="fixed bottom-0 left-0 w-full max-w-md mx-auto bg-white/90 backdrop-blur-md pb-safe pt-2 px-6 flex justify-around border-t border-gray-100 z-40" style="padding-bottom: env(safe-area-inset-bottom, 20px);">
+            <button v-for="t in tabs" @click="activeTab = t.id" :class="activeTab === t.id ? 'text-[#B06A6A]' : 'text-gray-300'" class="flex flex-col items-center p-2">
+                <i :class="t.icon" class="text-xl mb-1"></i>
+                <span class="text-[9px] font-bold uppercase">{{ t.label }}</span>
+            </button>
+        </nav>
+
+        <transition name="modal">
+            <div v-if="modals.wallet" class="fixed inset-0 bg-black/40 z-50 flex items-end justify-center">
+                <div class="bg-white w-full max-w-md rounded-t-[30px] p-6 pb-12 max-h-[85vh] overflow-y-auto relative">
+                    <button @click="modals.wallet = false" class="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-gray-400 bg-gray-100 rounded-full"><i class="fas fa-times"></i></button>
+                    <h2 class="text-lg font-bold text-gray-800 mb-5">記帳 💰</h2>
+                    <div class="flex rounded-xl bg-gray-100 p-1 mb-5">
+                        <button @click="form.wallet.type = '支出'" :class="form.wallet.type === '支出' ? 'bg-white shadow-sm text-red-400' : 'text-gray-400'" class="flex-1 py-2 rounded-lg text-sm font-bold">支出</button>
+                        <button @click="form.wallet.type = '收入'" :class="form.wallet.type === '收入' ? 'bg-white shadow-sm text-green-500' : 'text-gray-400'" class="flex-1 py-2 rounded-lg text-sm font-bold">換錢/退稅</button>
                     </div>
-
-                    <div v-if="modal.type === 'wallet'" class="space-y-4">
-                        <div class="flex bg-gray-100 p-1 rounded-2xl mb-4">
-                            <button @click="modalData.isIncome = false" :class="!modalData.isIncome ? 'bg-white shadow-sm' : ''" class="flex-1 py-2 rounded-xl text-sm font-bold transition-all">支出</button>
-                            <button @click="modalData.isIncome = true" :class="modalData.isIncome ? 'bg-white shadow-sm text-green-500' : ''" class="flex-1 py-2 rounded-xl text-sm font-bold transition-all">收入/換錢</button>
-                        </div>
-                        
+                    <div class="space-y-4">
                         <div>
-                            <label class="text-[10px] text-gray-400 font-bold uppercase ml-2">金額 ({{ modalData.isIncome ? '日幣或台幣' : '日幣 JPY' }})</label>
-                            <input type="number" v-model="modalData.amount" placeholder="輸入金額" class="w-full bg-gray-50 border-none rounded-2xl p-4 mt-1 text-lg font-bold">
+                            <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">金額 ({{ form.wallet.type === '收入' ? '日幣或台幣' : '日幣 JPY' }})</label>
+                            <input v-model.number="form.wallet.amount" type="number" class="input-style text-xl font-bold text-center h-14">
                         </div>
-
                         <div>
-                            <label class="text-[10px] text-gray-400 font-bold uppercase ml-2">項目名稱</label>
-                            <input type="text" v-model="modalData.name" placeholder="例如：白桃帕菲、飯店尾款" class="w-full bg-gray-50 border-none rounded-2xl p-4 mt-1">
+                            <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">項目名稱</label>
+                            <input v-model="form.wallet.name" type="text" placeholder="例：白桃聖代 🍑" class="input-style">
                         </div>
-
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="text-[10px] text-gray-400 font-bold uppercase ml-2">分類</label>
-                                <select v-model="modalData.category" class="w-full bg-gray-50 border-none rounded-2xl p-4 mt-1 text-sm appearance-none">
-                                    <option v-for="cat in (modalData.isIncome ? incomeCategories : expenseCategories)" :key="cat" :value="cat">{{ cat }}</option>
+                                <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">分類</label>
+                                <select v-model="form.wallet.category" class="input-style">
+                                    <option v-for="c in categories.wallet" :key="c" :value="c">{{ c }}</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="text-[10px] text-gray-400 font-bold uppercase ml-2">付款方式</label>
-                                <select v-model="modalData.paymentMethod" class="w-full bg-gray-50 border-none rounded-2xl p-4 mt-1 text-sm appearance-none">
-                                    <option value="現金 Cash">現金 Cash</option>
-                                    <option value="刷卡 Card">刷卡 Card</option>
+                                <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">付款方式</label>
+                                <select v-model="form.wallet.method" class="input-style">
+                                    <option value="現金">現金 Cash</option>
+                                    <option value="刷卡">刷卡 Card</option>
+                                </select>
+                            </div>
+                            <div class="col-span-2" v-if="form.wallet.type === '支出'">
+                                <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">歸屬階段</label>
+                                <select v-model="form.wallet.tag" class="input-style">
+                                    <option value="實際支出">當地實際花費</option>
+                                    <option value="行前支出">行前預支 (台幣)</option>
                                 </select>
                             </div>
                         </div>
-
-                        <div>
-                            <label class="text-[10px] text-gray-400 font-bold uppercase ml-2">歸屬階段</label>
-                            <select v-model="modalData.type" class="w-full bg-gray-50 border-none rounded-2xl p-4 mt-1 text-sm appearance-none">
-                                <option value="當地實際花費">當地實際花費</option>
-                                <option value="行前支出">行前支出</option>
-                            </select>
-                        </div>
-                        
-                        <button @click="saveRecord" class="w-full py-4 bg-[#A66B6B] text-white rounded-[24px] font-bold shadow-lg shadow-[#A66B6B]/30">儲存紀錄</button>
                     </div>
-
-                    <div v-if="modal.type === 'shop'" class="space-y-4">
-                        <input type="text" v-model="modalData.name" placeholder="想買什麼？" class="w-full bg-gray-50 border-none rounded-2xl p-4">
-                        <input type="text" v-model="modalData.category" placeholder="分類 (例如：美妝、零食)" class="w-full bg-gray-50 border-none rounded-2xl p-4">
-                        <input type="text" v-model="modalData.image" placeholder="圖片連結 (可選)" class="w-full bg-gray-50 border-none rounded-2xl p-4">
-                        <button @click="saveShopItem" class="w-full py-4 bg-[#A66B6B] text-white rounded-[24px] font-bold">新增待買</button>
-                    </div>
-
-                    <div v-if="modal.type === 'memo'" class="space-y-4">
-                        <textarea v-model="modalData.content" placeholder="記事內容..." class="w-full bg-gray-50 border-none rounded-2xl p-4 h-32"></textarea>
-                        <input type="text" v-model="modalData.link" placeholder="連結 (可選)" class="w-full bg-gray-50 border-none rounded-2xl p-4">
-                        <button @click="saveMemo" class="w-full py-4 bg-[#A66B6B] text-white rounded-[24px] font-bold">儲存 MEMO</button>
-                    </div>
-
-                    <div v-if="modal.type === 'plan'" class="space-y-4">
-                        <input type="time" v-model="modalData.time" class="w-full bg-gray-50 border-none rounded-2xl p-4">
-                        <input type="text" v-model="modalData.location" placeholder="地點" class="w-full bg-gray-50 border-none rounded-2xl p-4">
-                        <textarea v-model="modalData.note" placeholder="備註..." class="w-full bg-gray-50 border-none rounded-2xl p-4"></textarea>
-                        <button @click="savePlan" class="w-full py-4 bg-[#A66B6B] text-white rounded-[24px] font-bold">儲存行程</button>
+                    <div class="flex gap-3 mt-6">
+                        <button v-if="form.wallet.id" @click="deleteData('wallet')" class="py-3 px-5 rounded-2xl bg-red-50 text-red-400 font-bold text-sm">刪除</button>
+                        <button @click="saveData('wallet')" class="flex-1 py-3 rounded-2xl rose-bg text-white font-bold text-sm">儲存紀錄</button>
                     </div>
                 </div>
             </div>
         </transition>
 
-        <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex justify-around items-center pt-4 pb-8 z-40 max-w-md mx-auto rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
-            <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id" class="flex flex-col items-center space-y-1 w-1/3" :class="activeTab === tab.id ? 'bottom-nav-active' : 'text-gray-300'">
-                <i :class="tab.icon" class="text-xl"></i>
-                <span class="text-[10px] tracking-widest font-bold">{{ tab.name }}</span>
-            </button>
-        </nav>
+        <transition name="modal">
+            <div v-if="modals.plan" class="fixed inset-0 bg-black/40 z-50 flex items-end justify-center">
+                <div class="bg-white w-full max-w-md rounded-t-[30px] p-6 pb-12 relative">
+                    <button @click="modals.plan = false" class="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-gray-400 bg-gray-100 rounded-full"><i class="fas fa-times"></i></button>
+                    <h2 class="text-lg font-bold text-gray-800 mb-5">行程設定</h2>
+                    <div class="space-y-4">
+                        <div class="flex gap-3">
+                            <input v-model="form.plan.time" type="time" class="input-style flex-1 font-bold">
+                            <input v-model="form.plan.place" type="text" placeholder="景點名稱" class="input-style flex-[2] font-bold">
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-2xl flex justify-around">
+                            <button v-for="(icon, key) in transportIcons" :key="key" @click="form.plan.transport = key"
+                                class="w-10 h-10 rounded-full flex items-center justify-center transition-all"
+                                :class="form.plan.transport === key ? 'bg-white shadow-sm text-[#B06A6A]' : 'text-gray-300'">
+                                <i :class="icon"></i>
+                            </button>
+                        </div>
+                        <input v-model="form.plan.transportTime" type="text" placeholder="多久？ (例: 20m)" class="input-style">
+                        <input v-model="form.plan.duration" type="text" placeholder="停留時間 (例: 1.5h)" class="input-style">
+                        <input v-model="form.plan.link" type="text" placeholder="Google Maps 連結" class="input-style">
+                        <textarea v-model="form.plan.memo" rows="2" placeholder="備註..." class="input-style"></textarea>
+                    </div>
+                    <div class="flex gap-3 mt-6">
+                        <button v-if="form.plan.id" @click="deleteData('plan')" class="py-3 px-5 rounded-2xl bg-red-50 text-red-400 font-bold text-sm">刪除</button>
+                        <button @click="saveData('plan')" class="flex-1 py-3 rounded-2xl rose-bg text-white font-bold text-sm">儲存</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition name="modal">
+            <div v-if="modals.shop" class="fixed inset-0 bg-black/40 z-50 flex items-end justify-center">
+                <div class="bg-white w-full max-w-md rounded-t-[30px] p-6 pb-12 relative">
+                    <button @click="modals.shop = false" class="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-gray-400 bg-gray-100 rounded-full"><i class="fas fa-times"></i></button>
+                    <h2 class="text-lg font-bold text-gray-800 mb-5">待買清單 🛍️</h2>
+                    <div class="space-y-4">
+                        <input v-model="form.shop.name" type="text" placeholder="商品名稱" class="input-style font-bold">
+                        <input v-model="form.shop.image" type="text" placeholder="圖片連結 (從網路上貼過來)" class="input-style">
+                        <select v-model="form.shop.category" class="input-style">
+                            <option v-for="c in categories.shop" :key="c" :value="c">{{ c }}</option>
+                        </select>
+                        <textarea v-model="form.shop.memo" rows="2" placeholder="備註..." class="input-style"></textarea>
+                    </div>
+                    <div class="flex gap-3 mt-6">
+                        <button v-if="form.shop.id" @click="deleteData('shop')" class="py-3 px-5 rounded-2xl bg-red-50 text-red-400 font-bold text-sm">刪除</button>
+                        <button @click="saveData('shop')" class="flex-1 py-3 rounded-2xl rose-bg text-white font-bold text-sm">儲存</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition name="modal">
+            <div v-if="modals.memo" class="fixed inset-0 bg-black/40 z-50 flex items-end justify-center">
+                <div class="bg-white w-full max-w-md rounded-t-[30px] p-6 pb-12 relative">
+                    <button @click="modals.memo = false" class="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-gray-400 bg-gray-100 rounded-full"><i class="fas fa-times"></i></button>
+                    <h2 class="text-lg font-bold text-gray-800 mb-5">記事 Memo</h2>
+                    <div class="space-y-4">
+                        <textarea v-model="form.memo.text" rows="5" placeholder="輸入記事..." class="input-style"></textarea>
+                        <input v-model="form.memo.link" type="text" placeholder="連結 (選填)" class="input-style">
+                    </div>
+                    <div class="flex gap-3 mt-6">
+                        <button v-if="form.memo.id" @click="deleteData('memo')" class="py-3 px-5 rounded-2xl bg-red-50 text-red-400 font-bold text-sm">刪除</button>
+                        <button @click="saveData('memo')" class="flex-1 py-3 rounded-2xl rose-bg text-white font-bold text-sm">儲存</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
     </div>
 
     <script>
-        const { createApp, ref, computed, onMounted, watch } = Vue;
+        // --- 沿用妳的 Firebase 設定 ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3kArdpqdC4w96MWiW8Vw3h4BIy3FlliA",
+            authDomain: "okayama-dce52.firebaseapp.com",
+            databaseURL: "https://okayama-dce52-default-rtdb.firebaseio.com",
+            projectId: "okayama-dce52",
+            storageBucket: "okayama-dce52.firebasestorage.app",
+            messagingSenderId: "683103620896",
+            appId: "1:683103620896:web:7cb7802ef5c1e21504d145"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const tripRef = db.ref('okayama_v4_2026'); // 更新版本節點
+
+        const { createApp } = Vue;
 
         createApp({
-            setup() {
-                const activeTab = ref('plan');
-                const currentDate = ref('07-23');
-                const modal = ref({ show: false, type: '', title: '' });
-                const modalData = ref({});
-                
-                const days = [
-                    { date: '07-23', day: '23', week: 'thu' },
-                    { date: '07-24', day: '24', week: 'fri' },
-                    { date: '07-25', day: '25', week: 'sat' },
-                    { date: '07-26', day: '26', week: 'sun' }
-                ];
-
-                const tabs = [
-                    { id: 'plan', name: 'PLAN', icon: 'far fa-calendar-alt' },
-                    { id: 'wallet', name: 'WALLET', icon: 'fas fa-wallet' },
-                    { id: 'shop', name: 'SHOP', icon: 'fas fa-shopping-bag' }
-                ];
-
-                const expenseCategories = ['食物', '購物', '交通', '住宿', '景點', '其他'];
-                const incomeCategories = ['換錢', '退稅', '預算存入'];
-
-                // Data States
-                const plans = ref([]);
-                const records = ref([]);
-                const shoppingList = ref([]);
-                const memos = ref([]);
-
-                // 匯率 (岡山 V4：採用 2026/04 預計匯率 0.199, 可依日期擴充)
-                const getExchangeRate = (date) => 0.199;
-
-                // Firebase Config
-                const firebaseConfig = { databaseURL: "https://busan-trip-831e5-default-rtdb.firebaseio.com" };
-                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-                const db = firebase.database();
-
-                onMounted(() => {
-                    ['plans', 'records', 'shoppingList', 'memos'].forEach(key => {
-                        db.ref(`okayama-v4/${key}`).on('value', snapshot => {
-                            const val = snapshot.val();
-                            if (val) {
-                                // 轉成陣列並處理排序
-                                const arr = Object.keys(val).map(id => ({ id, ...val[id] }));
-                                if (key === 'plans') {
-                                    arr.sort((a, b) => a.time.localeCompare(b.time));
-                                } else if (val[0]?.order !== undefined) {
-                                    arr.sort((a, b) => (a.order || 0) - (b.order || 0));
-                                }
-                                eval(`${key}.value = arr`);
-                            } else {
-                                eval(`${key}.value = []`);
-                            }
-                        });
-                    });
-                });
-
-                // Wallet Calculations
-                const filteredRecords = computed(() => {
-                    return records.value.filter(r => r.date === currentDate.ref || true); // 錢包顯示全部
-                });
-
-                const totalSpentJPY = computed(() => records.value.reduce((sum, r) => r.isIncome ? sum : sum + Number(r.amount), 0));
-                const totalSpentTWD = computed(() => records.value.reduce((sum, r) => r.isIncome ? sum : sum + Number(r.twdAmount), 0));
-                
-                const beforeTripTotal = computed(() => records.value.filter(r => r.type === '行前支出' && !r.isIncome).reduce((sum, r) => sum + Number(r.amount), 0));
-                const beforeTripTotalTWD = computed(() => records.value.filter(r => r.type === '行前支出' && !r.isIncome).reduce((sum, r) => sum + Number(r.twdAmount), 0));
-                
-                const actualSpentTotal = computed(() => records.value.filter(r => r.type === '當地實際花費' && !r.isIncome).reduce((sum, r) => sum + Number(r.amount), 0));
-                const actualSpentTotalTWD = computed(() => records.value.filter(r => r.type === '當地實際花費' && !r.isIncome).reduce((sum, r) => sum + Number(r.twdAmount), 0));
-
-                const currentDayPlans = computed(() => plans.value.filter(p => p.date === currentDate.value));
-
-                // Actions
-                const openModal = (type) => {
-                    modal.value = { show: true, type, title: type.toUpperCase() };
-                    if (type === 'wallet') {
-                        modalData.value = { 
-                            date: currentDate.value, 
-                            isIncome: false, 
-                            paymentMethod: '現金 Cash', 
-                            type: '當地實際花費',
-                            category: '食物'
-                        };
-                    } else {
-                        modalData.value = { date: currentDate.value };
-                    }
-                };
-
-                const closeModal = () => { modal.value.show = false; modalData.value = {}; };
-
-                const saveRecord = () => {
-                    const rate = getExchangeRate(modalData.value.date);
-                    const twd = Math.round(modalData.value.amount * rate);
-                    const newRef = db.ref('okayama-v4/records').push();
-                    newRef.set({ 
-                        ...modalData.value, 
-                        twdAmount: twd, 
-                        order: records.value.length 
-                    });
-                    closeModal();
-                };
-
-                const saveShopItem = () => {
-                    db.ref('okayama-v4/shoppingList').push().set({ 
-                        ...modalData.value, 
-                        checked: false, 
-                        order: shoppingList.value.length 
-                    });
-                    closeModal();
-                };
-
-                const saveMemo = () => {
-                    db.ref('okayama-v4/memos').push().set({ 
-                        ...modalData.value, 
-                        order: memos.value.length 
-                    });
-                    closeModal();
-                };
-
-                const savePlan = () => {
-                    db.ref('okayama-v4/plans').push().set({ ...modalData.value });
-                    closeModal();
-                };
-
-                const deleteItem = (path, id) => {
-                    if (confirm('確定刪除嗎？')) db.ref(`okayama-v4/${path}/${id}`).remove();
-                };
-
-                const updateItem = (path, item) => {
-                    db.ref(`okayama-v4/${path}/${item.id}`).update(item);
-                };
-
-                // Reordering Logic
-                const moveRecord = (index, direction) => {
-                    const newIndex = index + direction;
-                    if (newIndex < 0 || newIndex >= records.value.length) return;
-                    const items = [...records.value];
-                    [items[index], items[newIndex]] = [items[newIndex], items[index]];
-                    items.forEach((item, i) => {
-                        db.ref(`okayama-v4/records/${item.id}`).update({ order: i });
-                    });
-                };
-
-                const moveShopItem = (index, direction) => {
-                    const newIndex = index + direction;
-                    if (newIndex < 0 || newIndex >= shoppingList.value.length) return;
-                    const items = [...shoppingList.value];
-                    [items[index], items[newIndex]] = [items[newIndex], items[index]];
-                    items.forEach((item, i) => {
-                        db.ref(`okayama-v4/shoppingList/${item.id}`).update({ order: i });
-                    });
-                };
-
-                const moveMemo = (index, direction) => {
-                    const newIndex = index + direction;
-                    if (newIndex < 0 || newIndex >= memos.value.length) return;
-                    const items = [...memos.value];
-                    [items[index], items[newIndex]] = [items[newIndex], items[index]];
-                    items.forEach((item, i) => {
-                        db.ref(`okayama-v4/memos/${item.id}`).update({ order: i });
-                    });
-                };
-
-                const formatNumber = (num) => new Intl.NumberFormat().format(num);
-
-                const getCategoryIcon = (cat) => {
-                    const icons = { '食物': 'fas fa-utensils', '購物': 'fas fa-shopping-bag', '交通': 'fas fa-train', '住宿': 'fas fa-bed', '景點': 'fas fa-camera', '換錢': 'fas fa-exchange-alt', '退稅': 'fas fa-hand-holding-usd' };
-                    return icons[cat] || 'fas fa-coins';
-                };
-
+            data() {
                 return {
-                    activeTab, currentDate, days, tabs, modal, modalData,
-                    expenseCategories, incomeCategories,
-                    plans, records, shoppingList, memos,
-                    totalSpentJPY, totalSpentTWD, beforeTripTotal, beforeTripTotalTWD, actualSpentTotal, actualSpentTotalTWD,
-                    filteredRecords, currentDayPlans,
-                    openModal, closeModal, saveRecord, saveShopItem, saveMemo, savePlan, deleteItem, updateItem,
-                    moveRecord, moveShopItem, moveMemo,
-                    formatNumber, getCategoryIcon
-                };
+                    activeTab: 'plan',
+                    selectedDay: 0,
+                    exchangeRate: 0.205, // V4 更新日期的參考匯率
+                    dates: [
+                        { date: '23', day: 'THU' }, { date: '24', day: 'FRI' },
+                        { date: '25', day: 'SAT' }, { date: '26', day: 'SUN' }
+                    ],
+                    tabs: [
+                        { id: 'plan', label: 'Plan', icon: 'far fa-calendar-alt' },
+                        { id: 'wallet', label: 'Wallet', icon: 'fas fa-wallet' },
+                        { id: 'shop', label: 'Shop', icon: 'fas fa-shopping-bag' }
+                    ],
+                    transportIcons: { 'walk': 'fas fa-walking', 'car': 'fas fa-car', 'bus': 'fas fa-bus', 'train': 'fas fa-train' },
+                    categoryIcons: { '食物': 'fas fa-utensils', '購物': 'fas fa-shopping-bag', '交通': 'fas fa-train', '住宿': 'fas fa-hotel', '換錢': 'fas fa-exchange-alt', '退稅': 'fas fa-hand-holding-usd' },
+                    categories: {
+                        wallet: ['食物', '購物', '交通', '住宿', '換錢', '退稅', '其他'],
+                        shop: ['美妝', '伴手禮', '服飾', '零食', '其他']
+                    },
+                    dbData: { planSummary: {}, planList: {}, walletList: {}, shopList: {}, memoList: {} },
+                    modals: { plan: false, wallet: false, shop: false, memo: false },
+                    form: { plan: {}, wallet: {}, shop: {}, memo: {} }
+                }
+            },
+            computed: {
+                dailySummary() { return this.dbData.planSummary || {}; },
+                currentPlanList() {
+                    return Object.entries(this.dbData.planList || {}).map(([id, val]) => ({ id, ...val }))
+                        .filter(i => i.dayIndex === this.selectedDay).sort((a,b) => (a.time||'').localeCompare(b.time||''));
+                },
+                walletList() {
+                    return Object.entries(this.dbData.walletList || {}).map(([id, val]) => ({ id, ...val }))
+                        .sort((a,b) => (a.order || 0) - (b.order || 0));
+                },
+                totalJPY() { return this.walletList.reduce((acc, cur) => acc + (cur.type === '支出' ? Number(cur.amount) : -Number(cur.amount)), 0); },
+                totalTWD() { return this.walletList.reduce((acc, cur) => acc + (cur.type === '支出' ? (cur.twdAmount || 0) : -(cur.twdAmount || 0)), 0); },
+                preTripSpent() { return this.walletList.filter(i => i.tag === '行前支出' && i.type === '支出').reduce((a,c) => a+Number(c.amount), 0); },
+                preTripSpentTWD() { return this.walletList.filter(i => i.tag === '行前支出' && i.type === '支出').reduce((a,c) => a+(c.twdAmount || 0), 0); },
+                actualSpent() { return this.walletList.filter(i => i.tag === '實際支出' && i.type === '支出').reduce((a,c) => a+Number(c.amount), 0); },
+                actualSpentTWD() { return this.walletList.filter(i => i.tag === '實際支出' && i.type === '支出').reduce((a,c) => a+(c.twdAmount || 0), 0); },
+                sortedShopList() { return Object.entries(this.dbData.shopList || {}).map(([id, val]) => ({ id, ...val })).sort((a,b) => (a.order || 0) - (b.order || 0)); },
+                sortedMemoList() { return Object.entries(this.dbData.memoList || {}).map(([id, val]) => ({ id, ...val })).sort((a,b) => (a.order || 0) - (b.order || 0)); }
+            },
+            mounted() {
+                tripRef.on('value', snap => { if(snap.exists()) this.dbData = snap.val(); });
+                fetch('https://open.er-api.com/v6/latest/JPY').then(r => r.json()).then(d => { if(d.rates.TWD) this.exchangeRate = d.rates.TWD; });
+            },
+            methods: {
+                formatNum(n) { return Number(n).toLocaleString(); },
+                editSummary() {
+                    const res = prompt('今日概要：', this.dailySummary[this.selectedDay] || '');
+                    if (res !== null) tripRef.child('planSummary').child(this.selectedDay).set(res);
+                },
+                openPlanModal(i = null) { this.form.plan = i ? {...i} : {time:'', place:'', transport:'walk', transportTime:'', duration:'', link:'', memo:''}; this.modals.plan = true; },
+                openWalletModal(i = null) { this.form.wallet = i ? {...i} : {type:'支出', amount:'', name:'', category:'食物', method:'現金', tag:'實際支出'}; this.modals.wallet = true; },
+                openShopModal(i = null) { this.form.shop = i ? {...i} : {name:'', image:'', category:'伴手禮', memo:'', checked:false}; this.modals.shop = true; },
+                openMemoModal(i = null) { this.form.memo = i ? {...i} : {text:'', link:''}; this.modals.memo = true; },
+                
+                saveData(type) {
+                    const ref = tripRef.child(type + 'List');
+                    const data = {...this.form[type]};
+                    if (type === 'plan') data.dayIndex = this.selectedDay;
+                    if (type === 'wallet' && !data.twdAmount) data.twdAmount = Math.round(data.amount * this.exchangeRate);
+                    
+                    const id = data.id || Date.now().toString();
+                    if (!data.order && data.order !== 0) {
+                        const listSize = Object.keys(this.dbData[type+'List'] || {}).length;
+                        data.order = listSize;
+                    }
+                    delete data.id;
+                    ref.child(id).set(data).then(() => this.modals[type] = false);
+                },
+                deleteData(type) { if(confirm('確定刪除？')) { tripRef.child(type+'List').child(this.form[type].id).remove().then(() => this.modals[type]=false); } },
+                toggleShopStatus(item) { tripRef.child('shopList').child(item.id).update({ checked: !item.checked }); },
+                
+                // 手動排序邏輯
+                reorder(listName, index, dir) {
+                    const list = listName === 'walletList' ? this.walletList : (listName === 'shopList' ? this.sortedShopList : this.sortedMemoList);
+                    const target = list[index + dir];
+                    if (!target) return;
+                    const current = list[index];
+                    const ref = tripRef.child(listName.replace('List', '') + 'List');
+                    ref.child(current.id).update({ order: index + dir });
+                    ref.child(target.id).update({ order: index });
+                }
             }
         }).mount('#app');
     </script>
-
-    <style>
-        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
-        .fade-enter-from, .fade-leave-to { opacity: 0; }
-        
-        @keyframes slide-up {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-        .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        
-        [v-cloak] { display: none; }
-    </style>
 </body>
 </html>
