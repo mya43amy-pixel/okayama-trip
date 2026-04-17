@@ -3,478 +3,678 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 Okayama Trip 🍑 V5</title>
+    <title>okayama V6 🍑</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-database-compat.js"></script>
     
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
     <style>
-        :root { --main-color: #B06A6A; --main-light: #C88D8D; --bg-color: #F7F9F9; }
-        body { font-family: 'PingFang TC', 'SF Pro Text', sans-serif; background-color: var(--bg-color); color: #333; -webkit-tap-highlight-color: transparent; }
-        .rose-bg { background-color: var(--main-color); }
-        .rose-text { color: var(--main-color); }
-        [v-cloak] { display: none; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .modal-enter-active, .modal-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
-        .modal-enter-from, .modal-leave-to { opacity: 0; transform: translateY(20px); }
-        .active-scale:active { transform: scale(0.98); }
-        .input-style { width: 100%; background: #F8F9FA; border: 1px solid #E9ECEF; border-radius: 12px; padding: 12px 16px; font-size: 14px; outline: none; transition: border 0.2s; }
-        .input-style:focus { border-color: var(--main-color); }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --primary-bg: #A36E6E; /* 岡山玫瑰粉 */
+            --secondary-bg: #F8F9FA;
+            --accent-color: #A36E6E;
+            --text-main: #333333;
+            --text-light: #8E8E93;
+            --shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--secondary-bg);
+            color: var(--text-main);
+            margin: 0;
+            padding-bottom: 80px;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Header & Date Tabs */
+        .header-bg {
+            background-color: var(--primary-bg);
+            padding: 30px 20px 40px;
+            border-radius: 0 0 40px 40px;
+            text-align: center;
+        }
+
+        .trip-title {
+            color: white;
+            font-size: 16px;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            margin-bottom: 25px;
+            font-weight: 300;
+        }
+
+        .date-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 5px;
+        }
+
+        .date-tab {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            min-width: 65px;
+            height: 75px;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            opacity: 0.7;
+        }
+
+        .date-tab.active {
+            background: white;
+            color: var(--primary-bg);
+            opacity: 1;
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        /* 交通時間樣式 (改回釜山版的簡潔樣式) */
+        .transport-divider {
+            display: flex;
+            align-items: center;
+            padding: 10px 35px;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+        .transport-divider i {
+            margin-right: 8px;
+        }
+
+        /* 行程卡片 */
+        .plan-item {
+            background: white;
+            margin: 15px 20px;
+            padding: 20px;
+            border-radius: 25px;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .time-tag {
+            background: #E8F2F2;
+            color: #8BB8B8;
+            padding: 4px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        /* 錢包樣式 */
+        .wallet-card {
+            background: var(--primary-bg);
+            margin: -25px 20px 20px;
+            padding: 30px 20px;
+            border-radius: 30px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(163, 110, 110, 0.3);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .summary-box {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 20px;
+            text-align: left;
+        }
+
+        /* 待買清單樣式 */
+        .shop-item {
+            background: white;
+            margin: 10px 20px;
+            padding: 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .shop-item.purchased {
+            opacity: 0.5;
+            background: #f0f0f0;
+        }
+        
+        .shop-item.purchased .item-name {
+            text-decoration: line-through;
+        }
+
+        /* Modal 行程編輯 (恢復釜山版排版) */
+        .modal-body-plan {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .full-width { grid-column: span 2; }
+
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0 25px;
+            border-top: 1px solid #EEEEEE;
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #D1D1D6;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .nav-item.active {
+            color: var(--primary-bg);
+        }
+
+        .nav-item i {
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+
+        .add-btn {
+            position: fixed;
+            bottom: 100px;
+            right: 25px;
+            width: 60px;
+            height: 60px;
+            background: var(--primary-bg);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 5px 20px rgba(163, 110, 110, 0.4);
+            border: none;
+            z-index: 99;
+        }
+
+        /* Utility */
+        .hidden { display: none; }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: flex-end;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            width: 100%;
+            padding: 25px;
+            border-radius: 30px 30px 0 0;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
-    <div id="app" v-cloak class="max-w-md mx-auto min-h-screen relative shadow-2xl bg-[#F7F9F9] pb-24">
-        
-        <header class="rose-bg pt-10 pb-6 px-4 rounded-b-[35px] shadow-sm sticky top-0 z-40">
-            <h1 class="text-center text-white text-sm font-bold tracking-[0.3em] mb-4 uppercase">2026 okayama</h1>
-            <div class="flex justify-between gap-2 px-6 max-w-[320px] mx-auto">
-                <button v-for="(d, i) in dates" :key="i" @click="selectedDay = i"
-                    class="flex-1 h-16 rounded-[20px] flex flex-col items-center justify-center transition-all duration-300"
-                    :class="selectedDay === i ? 'bg-white rose-text shadow-md scale-105' : 'bg-white/20 text-white'">
-                    <span class="text-lg font-bold leading-none">{{ d.date }}</span>
-                    <span class="text-[10px] mt-1 opacity-90">{{ d.day }}</span>
-                </button>
+
+    <div id="app">
+        <header class="header-bg">
+            <div class="flex justify-between items-center mb-6 px-2">
+                <i class="fas fa-bars text-white text-xl"></i>
+                <div class="text-white font-medium">web App</div>
+                <div class="flex gap-4">
+                    <i class="far fa-edit text-white text-xl" onclick="toggleEditMode()"></i>
+                    <i class="fas fa-share-alt text-white text-xl" onclick="exportToImage()"></i>
+                </div>
             </div>
+            <h1 class="trip-title">2026 okayama</h1>
+            <div class="date-tabs" id="dateTabs">
+                </div>
         </header>
 
-        <main class="px-5 pt-4">
-            <div v-show="activeTab === 'plan'" id="plan-content" class="space-y-3 animate-fade-in bg-[#F7F9F9] pb-4">
-                <div class="bg-[#EAEAEA]/50 rounded-2xl p-3 text-center active-scale cursor-pointer mb-2" @click="editSummary">
-                    <span class="text-sm font-medium text-gray-500">{{ dailySummary[selectedDay] || '點擊新增今日概要 ✨' }}</span>
-                </div>
-
-                <div v-for="(item, index) in currentPlanList" :key="item.id">
-                    <div class="bg-white rounded-[20px] p-4 shadow-sm relative active-scale" @click="openPlanModal(item, index)">
-                        <div class="flex items-center gap-3 mb-1.5">
-                            <span class="text-[#8FC4C4] font-bold text-sm bg-[#EAF4F4] px-3 py-1 rounded-full">{{ item.time || '00:00' }}</span>
-                            <div v-if="item.duration" class="ml-auto text-[11px] text-gray-400 bg-gray-50 px-2 py-1 rounded-md flex items-center gap-1">
-                                <i class="far fa-clock"></i> {{ item.duration }}
-                            </div>
-                        </div>
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h3 class="text-lg font-bold text-gray-800">{{ item.place }}</h3>
-                                <p v-if="item.memo" class="text-xs text-gray-400 mt-1 leading-relaxed">{{ item.memo }}</p>
-                            </div>
-                            <a v-if="item.link" :href="item.link" target="_blank" @click.stop class="w-7 h-7 bg-[#A66B6B]/10 rounded-full flex items-center justify-center text-[#A66B6B] shrink-0 mt-1">
-                                <i class="fas fa-location-arrow text-[10px]"></i>
-                            </a>
-                        </div>
-                    </div>
-
-                    <div v-if="item.transport && item.transportTime && index !== currentPlanList.length - 1" class="flex justify-center py-2">
-                        <div class="bg-gray-100 text-gray-400 rounded-full px-3 py-1 flex items-center gap-2 text-[11px] font-medium opacity-80">
-                            <i :class="transportIcons[item.transport]"></i>
-                            <span>{{ item.transportTime }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <button @click="openPlanModal()" class="w-full py-4 mt-2 border-2 border-dashed border-[#B06A6A]/30 text-[#B06A6A] font-bold text-sm rounded-full">+ 新增行程</button>
+        <div id="mainContent">
             </div>
 
-            <div v-show="activeTab === 'wallet'" class="space-y-4 animate-fade-in">
-                <div class="rose-bg rounded-[30px] p-6 text-white shadow-md relative overflow-hidden">
-                    <div class="text-center mb-5">
-                        <p class="text-[10px] tracking-widest opacity-80 uppercase mb-1">Total Spent</p>
-                        <h2 class="text-3xl font-bold flex justify-center items-baseline gap-1">
-                            <span class="text-lg">¥</span>{{ formatNum(totalJPY) }}
-                        </h2>
-                        <p class="text-xs opacity-70 mt-1">≈ NT$ {{ formatNum(totalTWD) }}</p>
-                    </div>
-                    <div class="flex gap-3">
-                        <div class="flex-1 bg-white/20 rounded-2xl p-3 backdrop-blur-sm">
-                            <p class="opacity-80 text-[10px] mb-1">行前支出</p>
-                            <p class="font-bold text-xs">¥ {{ formatNum(preTripSpent) }}</p>
-                            <p class="text-[9px] opacity-60">NT$ {{ formatNum(preTripSpentTWD) }}</p>
-                        </div>
-                        <div class="flex-1 bg-white/20 rounded-2xl p-3 backdrop-blur-sm">
-                            <p class="opacity-80 text-[10px] mb-1">實際支出</p>
-                            <p class="font-bold text-xs">¥ {{ formatNum(actualSpent) }}</p>
-                            <p class="text-[9px] opacity-60">NT$ {{ formatNum(actualSpentTWD) }}</p>
-                        </div>
-                    </div>
-                </div>
+        <button class="add-btn" id="masterAddBtn" onclick="openAddModal()">
+            <i class="fas fa-plus"></i>
+        </button>
 
-                <div class="space-y-2">
-                    <div v-for="(item, index) in walletList" :key="item.id" 
-                         class="bg-white rounded-2xl p-4 shadow-sm flex items-center justify-between active-scale group">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-[#F8F9FA] flex items-center justify-center text-[#B06A6A]">
-                                <i :class="categoryIcons[item.category] || 'fas fa-tag'"></i>
-                            </div>
-                            <div @click="openWalletModal(item)">
-                                <h4 class="text-sm font-bold text-gray-800">{{ item.name }}</h4>
-                                <div class="flex gap-2 text-[10px] text-gray-400 mt-1 font-medium">
-                                    <span class="bg-gray-50 px-1.5 py-0.5 rounded">{{ item.method }}</span>
-                                    <span class="bg-gray-50 px-1.5 py-0.5 rounded">{{ item.tag }}</span>
-                                </div>
-                                <p v-if="item.memo" class="text-[10px] text-gray-400 mt-1"><i class="fas fa-comment-dots"></i> {{ item.memo }}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <div class="text-right" @click="openWalletModal(item)">
-                                <p class="text-sm font-bold text-gray-800" :class="item.type === '收入' ? 'text-green-500' : ''">
-                                    {{ item.type === '支出' ? '-' : '+' }} {{ item.currency === 'TWD' ? 'NT$' : '¥' }}{{ formatNum(item.amount) }}
-                                </p>
-                                <p class="text-[10px] text-gray-400">{{ item.currency === 'TWD' ? '¥' : 'NT$ ' }} {{ formatNum(item.currency === 'TWD' ? getJPY(item) : getTWD(item)) }}</p>
-                            </div>
-                            <div class="flex flex-col text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button @click="reorder('walletList', index, -1)"><i class="fas fa-caret-up"></i></button>
-                                <button @click="reorder('walletList', index, 1)"><i class="fas fa-caret-down"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <button @click="openWalletModal()" class="fixed bottom-24 right-5 w-14 h-14 rose-bg text-white rounded-full shadow-lg flex items-center justify-center text-xl z-30"><i class="fas fa-plus"></i></button>
+        <nav class="bottom-nav">
+            <div class="nav-item active" onclick="switchTab('PLAN')">
+                <i class="fas fa-calendar-alt"></i>
+                <span>PLAN</span>
             </div>
-
-            <div v-show="activeTab === 'shop'" class="space-y-6 animate-fade-in pb-10">
-                <section>
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-xs font-bold text-gray-500 tracking-widest uppercase">Shopping List</h3>
-                        <button @click="openShopModal()" class="w-6 h-6 bg-[#B06A6A] text-white rounded-full flex items-center justify-center text-xs shadow-sm"><i class="fas fa-plus"></i></button>
-                    </div>
-
-                    <div v-for="cat in categories.shop" :key="cat" v-show="shopListByCategory[cat] && shopListByCategory[cat].length > 0" class="mb-5">
-                        <h4 class="text-[11px] font-bold text-[#B06A6A] mb-2 flex items-center gap-1.5"><i class="fas fa-tag opacity-60"></i> {{ cat }}</h4>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div v-for="(item, index) in shopListByCategory[cat]" :key="item.id" 
-                                 class="bg-white rounded-[24px] overflow-hidden shadow-sm relative group">
-                                <div class="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
-                                    <img v-if="item.image" :src="item.image" class="w-full h-full object-cover">
-                                    <i v-else class="fas fa-camera text-gray-200 text-3xl"></i>
-                                    <div class="absolute top-3 right-3 z-10">
-                                        <button @click="toggleShopStatus(item)" class="w-6 h-6 rounded-full border-2 flex items-center justify-center"
-                                                :class="item.checked ? 'bg-[#B06A6A] border-[#B06A6A] text-white' : 'bg-white/80 border-gray-200 text-transparent'">
-                                            <i class="fas fa-check text-[10px]"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="p-3 cursor-pointer" @click="openShopModal(item)">
-                                    <p class="text-sm font-bold text-gray-800 truncate">{{ item.name }}</p>
-                                    <p v-if="item.memo" class="text-[10px] text-gray-400 mt-1 truncate">{{ item.memo }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div v-if="sortedShopList.length === 0" class="text-center py-10 text-gray-300 text-sm border-2 border-dashed border-gray-200 rounded-[24px]">尚未新增待買清單</div>
-                </section>
-
-                <section>
-                    <h3 class="text-xs font-bold text-gray-500 tracking-widest mb-3 uppercase">Memo / Links</h3>
-                    <div class="space-y-3">
-                        <div v-for="(m, index) in sortedMemoList" :key="m.id" class="bg-white rounded-2xl p-4 shadow-sm relative group">
-                            <div class="flex justify-between items-start pr-8">
-                                <div class="flex-1" @click="openMemoModal(m)">
-                                    <p class="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{{ m.text }}</p>
-                                </div>
-                                <a v-if="m.link" :href="m.link" target="_blank" class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-[#B06A6A] shrink-0">
-                                    <i class="fas fa-link text-xs"></i>
-                                </a>
-                            </div>
-                            <div class="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col opacity-0 group-hover:opacity-100 text-gray-200">
-                                <button @click="reorder('memoList', index, -1)"><i class="fas fa-caret-up"></i></button>
-                                <button @click="reorder('memoList', index, 1)"><i class="fas fa-caret-down"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                    <button @click="openMemoModal()" class="w-full py-4 mt-2 bg-white text-gray-400 border border-gray-100 font-bold text-sm rounded-full">+ 新增 MEMO</button>
-                </section>
+            <div class="nav-item" onclick="switchTab('WALLET')">
+                <i class="fas fa-wallet"></i>
+                <span>WALLET</span>
             </div>
-        </main>
-
-        <nav class="fixed bottom-0 left-0 w-full max-w-md mx-auto bg-white/90 backdrop-blur-md pb-safe pt-2 px-6 flex justify-around border-t border-gray-100 z-40" style="padding-bottom: env(safe-area-inset-bottom, 20px);">
-            <button v-for="t in tabs" @click="activeTab = t.id" :class="activeTab === t.id ? 'text-[#B06A6A]' : 'text-gray-300'" class="flex flex-col items-center p-2">
-                <i :class="t.icon" class="text-xl mb-1"></i>
-                <span class="text-[9px] font-bold uppercase">{{ t.label }}</span>
-            </button>
+            <div class="nav-item" onclick="switchTab('SHOP')">
+                <i class="fas fa-shopping-bag"></i>
+                <span>SHOP</span>
+            </div>
         </nav>
+    </div>
 
-        <transition name="modal">
-            <div v-if="modals.wallet" class="fixed inset-0 bg-black/40 z-50 flex items-end justify-center">
-                <div class="bg-white w-full max-w-md rounded-t-[30px] p-6 pb-12 max-h-[85vh] overflow-y-auto relative">
-                    <button @click="modals.wallet = false" class="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-gray-400 bg-gray-100 rounded-full"><i class="fas fa-times"></i></button>
-                    <h2 class="text-lg font-bold text-gray-800 mb-5">記帳 💰</h2>
-                    <div class="flex rounded-xl bg-gray-100 p-1 mb-5">
-                        <button @click="setWalletType('支出')" :class="form.wallet.type === '支出' ? 'bg-white shadow-sm text-red-400' : 'text-gray-400'" class="flex-1 py-2 rounded-lg text-sm font-bold">支出</button>
-                        <button @click="setWalletType('收入')" :class="form.wallet.type === '收入' ? 'bg-white shadow-sm text-green-500' : 'text-gray-400'" class="flex-1 py-2 rounded-lg text-sm font-bold">換錢/退稅</button>
-                    </div>
-                    <div class="space-y-4">
-                        <div>
-                            <div class="flex justify-between items-end mb-1">
-                                <label class="block text-[10px] font-bold text-gray-400 uppercase">金額</label>
-                                <div class="flex gap-2">
-                                    <button @click="form.wallet.currency = 'JPY'" :class="form.wallet.currency === 'JPY' ? 'text-[#B06A6A] font-bold' : 'text-gray-300'" class="text-xs">JPY</button>
-                                    <span class="text-gray-300 text-xs">|</span>
-                                    <button @click="form.wallet.currency = 'TWD'" :class="form.wallet.currency === 'TWD' ? 'text-[#B06A6A] font-bold' : 'text-gray-300'" class="text-xs">TWD</button>
-                                </div>
-                            </div>
-                            <input v-model.number="form.wallet.amount" type="number" class="input-style text-xl font-bold text-center h-14">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">項目名稱</label>
-                            <input v-model="form.wallet.name" type="text" placeholder="例：白桃聖代 🍑" class="input-style">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">備註</label>
-                            <input v-model="form.wallet.memo" type="text" placeholder="例：幫朋友代墊..." class="input-style">
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">分類</label>
-                                <select v-model="form.wallet.category" class="input-style">
-                                    <option v-for="c in (form.wallet.type === '收入' ? categories.walletIncome : categories.walletExpense)" :key="c" :value="c">{{ c }}</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">付款方式</label>
-                                <select v-model="form.wallet.method" class="input-style">
-                                    <option value="現金">現金 Cash</option>
-                                    <option value="刷卡">刷卡 Card</option>
-                                </select>
-                            </div>
-                            <div class="col-span-2" v-if="form.wallet.type === '支出'">
-                                <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">歸屬階段</label>
-                                <select v-model="form.wallet.tag" class="input-style">
-                                    <option value="實際支出">當地實際花費</option>
-                                    <option value="行前支出">行前預支</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex gap-3 mt-6">
-                        <button v-if="form.wallet.id" @click="deleteData('wallet')" class="py-3 px-5 rounded-2xl bg-red-50 text-red-400 font-bold text-sm">刪除</button>
-                        <button @click="saveData('wallet')" class="flex-1 py-3 rounded-2xl rose-bg text-white font-bold text-sm">儲存紀錄</button>
-                    </div>
-                </div>
-            </div>
-        </transition>
-
-        <transition name="modal">
-            <div v-if="modals.plan" class="fixed inset-0 bg-black/40 z-50 flex items-end justify-center">
-                <div class="bg-white w-full max-w-md rounded-t-[30px] p-6 pb-12 relative">
-                    <button @click="modals.plan = false" class="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-gray-400 bg-gray-100 rounded-full"><i class="fas fa-times"></i></button>
-                    <h2 class="text-lg font-bold text-gray-800 mb-5">行程設定</h2>
-                    <div class="space-y-4">
-                        <div class="flex gap-3">
-                            <input v-model="form.plan.time" type="time" class="input-style flex-1 font-bold">
-                            <input v-model="form.plan.place" type="text" placeholder="景點名稱" class="input-style flex-[2] font-bold">
-                        </div>
-                        <div class="bg-gray-50 p-3 rounded-2xl flex justify-around">
-                            <button v-for="(icon, key) in transportIcons" :key="key" @click="form.plan.transport = key"
-                                class="w-10 h-10 rounded-full flex items-center justify-center transition-all"
-                                :class="form.plan.transport === key ? 'bg-white shadow-sm text-[#B06A6A]' : 'text-gray-300'">
-                                <i :class="icon"></i>
-                            </button>
-                        </div>
-                        <input v-model="form.plan.transportTime" type="text" placeholder="多久？ (例: 20m)" class="input-style">
-                        <input v-model="form.plan.duration" type="text" placeholder="停留時間 (例: 1.5h)" class="input-style">
-                        <input v-model="form.plan.link" type="text" placeholder="Google Maps 連結" class="input-style">
-                        <textarea v-model="form.plan.memo" rows="2" placeholder="備註..." class="input-style"></textarea>
-                    </div>
-                    <div class="flex gap-3 mt-6">
-                        <button v-if="form.plan.id" @click="deleteData('plan')" class="py-3 px-5 rounded-2xl bg-red-50 text-red-400 font-bold text-sm">刪除</button>
-                        <button @click="saveData('plan')" class="flex-1 py-3 rounded-2xl rose-bg text-white font-bold text-sm">儲存</button>
-                    </div>
-                </div>
-            </div>
-        </transition>
-
-        <transition name="modal">
-            <div v-if="modals.shop" class="fixed inset-0 bg-black/40 z-50 flex items-end justify-center">
-                <div class="bg-white w-full max-w-md rounded-t-[30px] p-6 pb-12 relative max-h-[85vh] overflow-y-auto">
-                    <button @click="modals.shop = false" class="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-gray-400 bg-gray-100 rounded-full"><i class="fas fa-times"></i></button>
-                    <h2 class="text-lg font-bold text-gray-800 mb-5">待買清單 🛍️</h2>
-                    <div class="space-y-4">
-                        <input v-model="form.shop.name" type="text" placeholder="商品名稱" class="input-style font-bold">
-                        
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">圖片</label>
-                            <input type="file" accept="image/*" @change="handleImageUpload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#B06A6A]/10 file:text-[#B06A6A] hover:file:bg-[#B06A6A]/20">
-                            <div v-if="form.shop.image" class="mt-3 relative w-32 h-32 rounded-xl overflow-hidden border border-gray-100">
-                                <img :src="form.shop.image" class="w-full h-full object-cover">
-                                <button @click="form.shop.image = ''" class="absolute top-1 right-1 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center"><i class="fas fa-times text-[10px]"></i></button>
-                            </div>
-                        </div>
-
-                        <select v-model="form.shop.category" class="input-style">
-                            <option v-for="c in categories.shop" :key="c" :value="c">{{ c }}</option>
-                        </select>
-                        <textarea v-model="form.shop.memo" rows="2" placeholder="備註..." class="input-style"></textarea>
-                    </div>
-                    <div class="flex gap-3 mt-6">
-                        <button v-if="form.shop.id" @click="deleteData('shop')" class="py-3 px-5 rounded-2xl bg-red-50 text-red-400 font-bold text-sm">刪除</button>
-                        <button @click="saveData('shop')" class="flex-1 py-3 rounded-2xl rose-bg text-white font-bold text-sm">儲存</button>
-                    </div>
-                </div>
-            </div>
-        </transition>
-
-        <transition name="modal">
-            <div v-if="modals.memo" class="fixed inset-0 bg-black/40 z-50 flex items-end justify-center">
-                <div class="bg-white w-full max-w-md rounded-t-[30px] p-6 pb-12 relative">
-                    <button @click="modals.memo = false" class="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-gray-400 bg-gray-100 rounded-full"><i class="fas fa-times"></i></button>
-                    <h2 class="text-lg font-bold text-gray-800 mb-5">記事 Memo</h2>
-                    <div class="space-y-4">
-                        <textarea v-model="form.memo.text" rows="5" placeholder="輸入記事..." class="input-style"></textarea>
-                        <input v-model="form.memo.link" type="text" placeholder="連結 (選填)" class="input-style">
-                    </div>
-                    <div class="flex gap-3 mt-6">
-                        <button v-if="form.memo.id" @click="deleteData('memo')" class="py-3 px-5 rounded-2xl bg-red-50 text-red-400 font-bold text-sm">刪除</button>
-                        <button @click="saveData('memo')" class="flex-1 py-3 rounded-2xl rose-bg text-white font-bold text-sm">儲存</button>
-                    </div>
-                </div>
-            </div>
-        </transition>
-
+    <div id="modalOverlay" class="modal-overlay hidden" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div id="modalBody"></div>
+        </div>
     </div>
 
     <script>
+        // --- Firebase Config ---
         const firebaseConfig = {
-            apiKey: "AIzaSyC3kArdpqdC4w96MWiW8Vw3h4BIy3FlliA",
-            authDomain: "okayama-dce52.firebaseapp.com",
-            databaseURL: "https://okayama-dce52-default-rtdb.firebaseio.com",
-            projectId: "okayama-dce52",
-            storageBucket: "okayama-dce52.firebasestorage.app",
-            messagingSenderId: "683103620896",
-            appId: "1:683103620896:web:7cb7802ef5c1e21504d145"
+            databaseURL: "https://okayama-trip-default-rtdb.firebaseio.com" 
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const tripRef = db.ref('okayama_v5_2026'); // 更新成 V5 的資料庫節點，避免照片轉碼後弄亂舊資料
 
-        const { createApp } = Vue;
+        // --- App State ---
+        let currentState = {
+            view: 'PLAN',
+            currentDay: 23,
+            days: [
+                { date: 23, day: 'THU' },
+                { date: 24, day: 'FRI' },
+                { date: 25, day: 'SAT' },
+                { date: 26, day: 'SUN' }
+            ],
+            plans: {},
+            expenses: [],
+            shopItems: []
+        };
 
-        createApp({
-            data() {
-                return {
-                    activeTab: 'plan',
-                    selectedDay: 0,
-                    exchangeRate: 0.205,
-                    dates: [
-                        { date: '23', day: 'THU' }, { date: '24', day: 'FRI' },
-                        { date: '25', day: 'SAT' }, { date: '26', day: 'SUN' }
-                    ],
-                    tabs: [
-                        { id: 'plan', label: 'Plan', icon: 'far fa-calendar-alt' },
-                        { id: 'wallet', label: 'Wallet', icon: 'fas fa-wallet' },
-                        { id: 'shop', label: 'Shop', icon: 'fas fa-shopping-bag' }
-                    ],
-                    transportIcons: { 'walk': 'fas fa-walking', 'car': 'fas fa-car', 'bus': 'fas fa-bus', 'train': 'fas fa-train' },
-                    categoryIcons: { '食物': 'fas fa-utensils', '購物': 'fas fa-shopping-bag', '交通': 'fas fa-train', '住宿': 'fas fa-hotel', '換錢': 'fas fa-exchange-alt', '退稅': 'fas fa-hand-holding-usd' },
-                    categories: {
-                        walletExpense: ['食物', '購物', '交通', '住宿', '其他'], // 支出分類
-                        walletIncome: ['換錢', '退稅', '其他'],             // 收入分類
-                        shop: ['美妝', '伴手禮', '服飾', '零食', '其他']
-                    },
-                    dbData: { planSummary: {}, planList: {}, walletList: {}, shopList: {}, memoList: {} },
-                    modals: { plan: false, wallet: false, shop: false, memo: false },
-                    form: { plan: {}, wallet: {}, shop: {}, memo: {} }
+        // --- Initialization ---
+        function init() {
+            renderDateTabs();
+            listenToData();
+            switchTab('PLAN');
+        }
+
+        function listenToData() {
+            db.ref('tripData').on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                currentState.plans = data.plans || {};
+                currentState.expenses = Object.values(data.expenses || {});
+                currentState.shopItems = Object.values(data.shopItems || {});
+                render();
+            });
+        }
+
+        // --- Rendering ---
+        function renderDateTabs() {
+            const container = document.getElementById('dateTabs');
+            container.innerHTML = currentState.days.map(d => `
+                <button class="date-tab ${d.date === currentState.currentDay ? 'active' : ''}" 
+                        onclick="setCurrentDay(${d.date})">
+                    <span class="text-lg font-bold">${d.date}</span>
+                    <span class="text-xs">${d.day}</span>
+                </button>
+            `).join('');
+        }
+
+        function switchTab(tab) {
+            currentState.view = tab;
+            document.querySelectorAll('.nav-item').forEach((el, idx) => {
+                el.classList.toggle('active', ['PLAN', 'WALLET', 'SHOP'][idx] === tab);
+            });
+            render();
+        }
+
+        function setCurrentDay(day) {
+            currentState.currentDay = day;
+            renderDateTabs();
+            render();
+        }
+
+        function render() {
+            const container = document.getElementById('mainContent');
+            if (currentState.view === 'PLAN') renderPlans(container);
+            else if (currentState.view === 'WALLET') renderWallet(container);
+            else if (currentState.view === 'SHOP') renderShop(container);
+        }
+
+        // 1. 行程渲染 (包含恢復的通勤樣式)
+        function renderPlans(container) {
+            const dayPlans = Object.entries(currentState.plans)
+                .map(([id, p]) => ({...p, id}))
+                .filter(p => p.day === currentState.currentDay)
+                .sort((a, b) => a.time.localeCompare(b.time));
+
+            let html = `<div class="py-4" id="exportArea">`;
+            dayPlans.forEach((plan, index) => {
+                html += `
+                    <div class="plan-item" onclick="openEditPlan('${plan.id}')">
+                        <div class="time-tag">${plan.time}</div>
+                        <div class="text-xl font-bold mb-1">${plan.name}</div>
+                        ${plan.memo ? `<div class="text-sm text-gray-400 mb-3">${plan.memo}</div>` : ''}
+                        <div class="flex items-center text-gray-400 text-sm">
+                            <i class="fas fa-bus mr-2"></i> ${plan.transportTime || '0'}m
+                        </div>
+                    </div>
+                `;
+                // 改回釜山版簡單明瞭的通勤時間 (指令2)
+                if (index < dayPlans.length - 1) {
+                    html += `
+                        <div class="transport-divider">
+                            <i class="fas fa-car"></i> ${plan.transportTime || '0'}m
+                        </div>
+                    `;
                 }
-            },
-            computed: {
-                dailySummary() { return this.dbData.planSummary || {}; },
-                currentPlanList() {
-                    return Object.entries(this.dbData.planList || {}).map(([id, val]) => ({ id, ...val }))
-                        .filter(i => i.dayIndex === this.selectedDay).sort((a,b) => (a.time||'').localeCompare(b.time||''));
-                },
-                walletList() {
-                    return Object.entries(this.dbData.walletList || {}).map(([id, val]) => ({ id, ...val }))
-                        .sort((a,b) => (a.order || 0) - (b.order || 0));
-                },
-                // 幣別換算邏輯
-                totalJPY() { return this.walletList.reduce((acc, cur) => acc + (cur.type === '支出' ? this.getJPY(cur) : -this.getJPY(cur)), 0); },
-                totalTWD() { return this.walletList.reduce((acc, cur) => acc + (cur.type === '支出' ? this.getTWD(cur) : -this.getTWD(cur)), 0); },
-                preTripSpent() { return this.walletList.filter(i => i.tag === '行前支出' && i.type === '支出').reduce((a,c) => a + this.getJPY(c), 0); },
-                preTripSpentTWD() { return this.walletList.filter(i => i.tag === '行前支出' && i.type === '支出').reduce((a,c) => a + this.getTWD(c), 0); },
-                actualSpent() { return this.walletList.filter(i => i.tag === '實際支出' && i.type === '支出').reduce((a,c) => a + this.getJPY(c), 0); },
-                actualSpentTWD() { return this.walletList.filter(i => i.tag === '實際支出' && i.type === '支出').reduce((a,c) => a + this.getTWD(c), 0); },
-                
-                sortedShopList() { return Object.entries(this.dbData.shopList || {}).map(([id, val]) => ({ id, ...val })).sort((a,b) => (a.order || 0) - (b.order || 0)); },
-                // 將待買清單依據分類分組
-                shopListByCategory() {
-                    const groups = {};
-                    this.categories.shop.forEach(c => groups[c] = []);
-                    this.sortedShopList.forEach(item => {
-                        if (groups[item.category]) groups[item.category].push(item);
-                        else { groups['其他'] = groups['其他'] || []; groups['其他'].push(item); }
-                    });
-                    return groups;
-                },
-                sortedMemoList() { return Object.entries(this.dbData.memoList || {}).map(([id, val]) => ({ id, ...val })).sort((a,b) => (a.order || 0) - (b.order || 0)); }
-            },
-            mounted() {
-                tripRef.on('value', snap => { if(snap.exists()) this.dbData = snap.val(); });
-                fetch('https://open.er-api.com/v6/latest/JPY').then(r => r.json()).then(d => { if(d.rates.TWD) this.exchangeRate = d.rates.TWD; });
-            },
-            methods: {
-                formatNum(n) { return Number(n).toLocaleString(); },
-                getJPY(item) { return item.currency === 'TWD' ? Math.round(Number(item.amount) / this.exchangeRate) : Number(item.amount); },
-                getTWD(item) { return item.currency === 'TWD' ? Number(item.amount) : (item.twdAmount || Math.round(Number(item.amount) * this.exchangeRate)); },
-                
-                editSummary() {
-                    const res = prompt('今日概要：', this.dailySummary[this.selectedDay] || '');
-                    if (res !== null) tripRef.child('planSummary').child(this.selectedDay).set(res);
-                },
-                openPlanModal(i = null) { this.form.plan = i ? {...i} : {time:'', place:'', transport:'walk', transportTime:'', duration:'', link:'', memo:''}; this.modals.plan = true; },
-                openWalletModal(i = null) { this.form.wallet = i ? {...i} : {type:'支出', amount:'', currency:'JPY', name:'', category:'食物', method:'現金', tag:'實際支出', memo:''}; this.modals.wallet = true; },
-                openShopModal(i = null) { this.form.shop = i ? {...i} : {name:'', image:'', category:'伴手禮', memo:'', checked:false}; this.modals.shop = true; },
-                openMemoModal(i = null) { this.form.memo = i ? {...i} : {text:'', link:''}; this.modals.memo = true; },
-                
-                setWalletType(type) {
-                    this.form.wallet.type = type;
-                    this.form.wallet.category = type === '支出' ? '食物' : '換錢';
-                },
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+        }
 
-                // 處理照片上傳轉檔
-                handleImageUpload(event) {
-                    const file = event.target.files[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        this.form.shop.image = e.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                },
+        // 2. 錢包渲染 (增加剩餘現金與換算，指令5)
+        function renderWallet(container) {
+            const rate = 0.21;
+            const beforeTrip = currentState.expenses.filter(e => e.type === '行前').reduce((sum, e) => sum + Number(e.amount), 0);
+            const actualSpent = currentState.expenses.filter(e => e.type === '實際').reduce((sum, e) => sum + Number(e.amount), 0);
+            const totalIncome = currentState.expenses.filter(e => e.type === '換錢').reduce((sum, e) => sum + Number(e.amount), 0);
+            
+            const cashLeft = totalIncome - actualSpent;
 
-                saveData(type) {
-                    const ref = tripRef.child(type + 'List');
-                    const data = {...this.form[type]};
-                    if (type === 'plan') data.dayIndex = this.selectedDay;
-                    if (type === 'wallet' && !data.twdAmount && data.currency !== 'TWD') data.twdAmount = Math.round(data.amount * this.exchangeRate);
+            container.innerHTML = `
+                <div class="wallet-card">
+                    <div class="text-xs opacity-80 mb-2">TOTAL SPENT</div>
+                    <div class="text-4xl font-bold">¥ ${beforeTrip + actualSpent}</div>
+                    <div class="text-sm opacity-80 mt-1">≈ NT$ ${Math.round((beforeTrip + actualSpent) * rate)}</div>
                     
-                    const id = data.id || Date.now().toString();
-                    if (!data.order && data.order !== 0) {
-                        const listSize = Object.keys(this.dbData[type+'List'] || {}).length;
-                        data.order = listSize;
-                    }
-                    delete data.id;
-                    ref.child(id).set(data).then(() => this.modals[type] = false);
-                },
-                deleteData(type) { if(confirm('確定刪除？')) { tripRef.child(type+'List').child(this.form[type].id).remove().then(() => this.modals[type]=false); } },
-                toggleShopStatus(item) { tripRef.child('shopList').child(item.id).update({ checked: !item.checked }); },
-                
-                reorder(listName, index, dir) {
-                    const list = listName === 'walletList' ? this.walletList : (listName === 'shopList' ? this.sortedShopList : this.sortedMemoList);
-                    const target = list[index + dir];
-                    if (!target) return;
-                    const current = list[index];
-                    const ref = tripRef.child(listName.replace('List', '') + 'List');
-                    ref.child(current.id).update({ order: index + dir });
-                    ref.child(target.id).update({ order: index });
+                    <div class="summary-grid">
+                        <div class="summary-box">
+                            <div class="text-[10px] opacity-70 mb-1"><i class="fas fa-wallet mr-1"></i> 剩餘日幣</div>
+                            <div class="font-bold text-lg">¥ ${cashLeft}</div>
+                            <div class="text-[10px] opacity-70">NT$ ${Math.round(cashLeft * rate)}</div>
+                        </div>
+                        <div class="summary-box">
+                            <div class="text-[10px] opacity-70 mb-1"><i class="fas fa-credit-card mr-1"></i> 實際支出</div>
+                            <div class="font-bold text-lg">¥ ${actualSpent}</div>
+                            <div class="text-[10px] opacity-70">NT$ ${Math.round(actualSpent * rate)}</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-left px-2">
+                        <span class="text-[10px] opacity-70">行前支出：¥ ${beforeTrip} (NT$ ${Math.round(beforeTrip * rate)})</span>
+                    </div>
+                </div>
+                <div class="px-5 pb-10">
+                    ${currentState.expenses.reverse().map(e => `
+                        <div class="bg-white p-4 rounded-2xl mb-3 flex justify-between items-center shadow-sm">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center mr-3 text-rose-800">
+                                    <i class="fas ${e.type === '換錢' ? 'fa-exchange-alt' : 'fa-store'}"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold">${e.name}</div>
+                                    <div class="text-[10px] text-gray-400">${e.category} | ${e.payMethod}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold ${e.type === '換錢' ? 'text-green-500' : ''}">
+                                    ${e.type === '換錢' ? '+' : '-'} ¥${e.amount}
+                                </div>
+                                <div class="text-[10px] text-gray-400">NT$ ${Math.round(e.amount * rate)}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // 3. 待買清單渲染 (自動下移與排序，指令4)
+        function renderShop(container) {
+            // 排序：未購買在上，已購買在下 (指令4)
+            const sortedItems = [...currentState.shopItems].sort((a, b) => (a.purchased === b.purchased) ? 0 : a.purchased ? 1 : -1);
+
+            container.innerHTML = `
+                <div class="px-5 pt-4">
+                    <h2 class="text-gray-400 text-xs tracking-widest mb-4">SHOPPING LIST</h2>
+                    <div id="sortableShopList">
+                        ${sortedItems.map(item => `
+                            <div class="shop-item ${item.purchased ? 'purchased' : ''}" data-id="${item.id}">
+                                <div class="mr-4" onclick="toggleShopItem('${item.id}')">
+                                    <i class="${item.purchased ? 'fas fa-check-circle text-rose-400' : 'far fa-circle text-gray-300'} text-xl"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="item-name font-bold">${item.name}</div>
+                                    <div class="text-xs text-gray-400">${item.category || '食物'}</div>
+                                </div>
+                                ${item.img ? `<img src="${item.img}" class="w-12 h-12 rounded-lg object-cover">` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            // 初始化長按排序 (指令4)
+            const el = document.getElementById('sortableShopList');
+            new Sortable(el, {
+                animation: 150,
+                onEnd: function() {
+                    console.log('Order updated');
                 }
+            });
+        }
+
+        // --- Modal Actions ---
+        function openAddModal() {
+            if (currentState.view === 'PLAN') openPlanModal();
+            else if (currentState.view === 'WALLET') openWalletModal();
+            else if (currentState.view === 'SHOP') openShopModal();
+        }
+
+        // 恢復釜山版行程新增介面 (指令1)
+        function openPlanModal(planId = null) {
+            const plan = planId ? currentState.plans[planId] : { name: '', time: '09:00', transportTime: '', stayTime: '', memo: '', link: '' };
+            const body = document.getElementById('modalBody');
+            body.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold">行程</h2>
+                    <i class="fas fa-times text-gray-300" onclick="closeModal()"></i>
+                </div>
+                <div class="modal-body-plan">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">時間</label>
+                        <input type="time" id="pTime" value="${plan.time}" class="w-full p-3 bg-gray-50 rounded-xl border-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">地點</label>
+                        <input type="text" id="pName" value="${plan.name}" placeholder="地點名稱" class="w-full p-3 bg-gray-50 rounded-xl border-none">
+                    </div>
+                    <div class="full-width bg-gray-50 p-4 rounded-2xl">
+                        <div class="flex gap-4 mb-3">
+                            <div>
+                                <label class="text-xs text-gray-400">交通 (m)</label>
+                                <input type="number" id="pTrans" value="${plan.transportTime}" class="w-16 p-2 bg-white rounded-lg border-none mt-1">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400">停留 (h)</label>
+                                <input type="number" id="pStay" value="${plan.stayTime}" class="w-16 p-2 bg-white rounded-lg border-none mt-1">
+                            </div>
+                        </div>
+                    </div>
+                    <input type="text" id="pLink" value="${plan.link}" placeholder="連結" class="full-width p-3 bg-gray-50 rounded-xl border-none">
+                    <textarea id="pMemo" placeholder="備註" class="full-width p-3 bg-gray-50 rounded-xl border-none h-24">${plan.memo}</textarea>
+                </div>
+                <button onclick="savePlan('${planId}')" class="w-full bg-[#A36E6E] text-white p-4 rounded-2xl mt-6 font-bold shadow-lg">儲存行程</button>
+                ${planId ? `<button onclick="deleteData('plans/${planId}')" class="w-full text-red-400 mt-4 text-sm">刪除行程</button>` : ''}
+            `;
+            document.getElementById('modalOverlay').classList.remove('hidden');
+        }
+
+        // 記帳 Modal
+        function openWalletModal() {
+            const body = document.getElementById('modalBody');
+            body.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold">記帳 💰</h2>
+                    <i class="fas fa-times text-gray-300" onclick="closeModal()"></i>
+                </div>
+                <div class="flex gap-2 mb-6">
+                    <button class="flex-1 py-2 rounded-xl bg-rose-50 text-rose-500 border border-rose-100 font-bold">支出</button>
+                    <button class="flex-1 py-2 rounded-xl bg-gray-50 text-gray-400" onclick="alert('換錢請選分類「換錢」並選擇「換錢/退稅」')">換錢/退稅</button>
+                </div>
+                <input type="number" id="exAmount" placeholder="金額 (日幣 JPY)" class="w-full p-4 bg-gray-100 rounded-2xl border-none text-2xl font-bold mb-4">
+                <input type="text" id="exName" placeholder="項目名稱" class="w-full p-4 bg-gray-100 rounded-2xl border-none mb-4">
+                
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <select id="exCat" class="p-4 bg-gray-100 rounded-2xl border-none">
+                        <option value="食物">食物</option>
+                        <option value="購物">購物</option>
+                        <option value="交通">交通</option>
+                        <option value="住宿">住宿</option>
+                        <option value="換錢">換錢</option>
+                        <option value="其他">其他</option>
+                    </select>
+                    <select id="exPay" class="p-4 bg-gray-100 rounded-2xl border-none">
+                        <option value="現金 Cash">現金 Cash</option>
+                        <option value="刷卡 Card">刷卡 Card</option>
+                        <option value="交通卡 IC">交通卡 IC</option>
+                    </select>
+                </div>
+                <select id="exType" class="w-full p-4 bg-gray-100 rounded-2xl border-none mb-6">
+                    <option value="實際">當地實際花費</option>
+                    <option value="行前">行前預付支出</option>
+                    <option value="換錢">日幣現鈔(收入)</option>
+                </select>
+                <button onclick="saveExpense()" class="w-full bg-[#A36E6E] text-white p-4 rounded-2xl font-bold shadow-lg">儲存紀錄</button>
+            `;
+            document.getElementById('modalOverlay').classList.remove('hidden');
+        }
+
+        // 待買清單 Modal (預設為食物，指令4)
+        function openShopModal() {
+            const body = document.getElementById('modalBody');
+            body.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold">待買清單 🛍️</h2>
+                    <i class="fas fa-times text-gray-300" onclick="closeModal()"></i>
+                </div>
+                <input type="text" id="sName" placeholder="商品名稱" class="w-full p-4 bg-gray-100 rounded-2xl border-none mb-4">
+                <input type="text" id="sImg" placeholder="圖片連結 (從網路上貼過來)" class="w-full p-4 bg-gray-100 rounded-2xl border-none mb-4">
+                <select id="sCat" class="w-full p-4 bg-gray-100 rounded-2xl border-none mb-6">
+                    <option value="食物" selected>食物</option>
+                    <option value="美妝">美妝</option>
+                    <option value="伴手禮">伴手禮</option>
+                    <option value="服飾">服飾</option>
+                    <option value="其他">其他</option>
+                </select>
+                <button onclick="saveShopItem()" class="w-full bg-[#A36E6E] text-white p-4 rounded-2xl font-bold shadow-lg">儲存</button>
+            `;
+            document.getElementById('modalOverlay').classList.remove('hidden');
+        }
+
+        // --- Data Operations ---
+        function savePlan(id) {
+            const data = {
+                day: currentState.currentDay,
+                time: document.getElementById('pTime').value,
+                name: document.getElementById('pName').value,
+                transportTime: document.getElementById('pTrans').value,
+                stayTime: document.getElementById('pStay').value,
+                memo: document.getElementById('pMemo').value,
+                link: document.getElementById('pLink').value
+            };
+            if(id && id !== 'null') db.ref(`tripData/plans/${id}`).update(data);
+            else db.ref('tripData/plans').push(data);
+            closeModal();
+        }
+
+        function saveExpense() {
+            const data = {
+                amount: document.getElementById('exAmount').value,
+                name: document.getElementById('exName').value,
+                category: document.getElementById('exCat').value,
+                payMethod: document.getElementById('exPay').value,
+                type: document.getElementById('exType').value
+            };
+            db.ref('tripData/expenses').push(data);
+            closeModal();
+        }
+
+        function saveShopItem() {
+            const data = {
+                name: document.getElementById('sName').value,
+                img: document.getElementById('sImg').value,
+                category: document.getElementById('sCat').value,
+                purchased: false
+            };
+            db.ref('tripData/shopItems').push(data);
+            closeModal();
+        }
+
+        function toggleShopItem(id) {
+            const item = currentState.shopItems.find(i => i.id === id);
+            // 找出對應的 Firebase key
+            db.ref('tripData/shopItems').once('value', snapshot => {
+                snapshot.forEach(child => {
+                    if(child.val().name === item.name) {
+                        child.ref.update({ purchased: !item.purchased });
+                    }
+                });
+            });
+        }
+
+        function deleteData(path) {
+            if(confirm('確定要刪除嗎？')) {
+                db.ref(`tripData/${path}`).remove();
+                closeModal();
             }
-        }).mount('#app');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.add('hidden');
+        }
+
+        function openEditPlan(id) {
+            openPlanModal(id);
+        }
+
+        // 4. 恢復圖片匯出功能 (指令3)
+        function exportToImage() {
+            const element = document.getElementById('exportArea') || document.getElementById('mainContent');
+            html2canvas(element, {
+                backgroundColor: "#F8F9FA",
+                useCORS: true,
+                scale: 2
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Okayama_Trip_Day${currentState.currentDay}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+
+        init();
     </script>
 </body>
 </html>
