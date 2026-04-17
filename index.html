@@ -38,7 +38,7 @@
         .type-toggle .active-expense { background: var(--pink-main); color: white; }
 
         .bill-card { transition: all 0.2s; border-left: 4px solid transparent; }
-        .drag-handle { cursor: grab; padding: 10px; margin: -10px; }
+        .drag-handle { cursor: grab; }
 
         .checked-overlay {
             position: absolute;
@@ -162,27 +162,32 @@
 
             <div v-if="activeTab === 'shop'" class="space-y-8 pb-10">
                 <div v-for="cat in ['美妝', '伴手禮', '服飾', '食物', '其他']" :key="cat" class="space-y-3">
-                    <h3 class="font-black text-gray-700 text-sm px-2">{{cat}} ({{getShopItemsByCat(cat).length}})</h3>
+                    <h3 @click="toggleCat(cat)" class="font-black text-gray-700 text-sm px-2 flex justify-between items-center cursor-pointer">
+                        <span>{{cat}} ({{getShopItemsByCat(cat).length}})</span>
+                        <i class="fas text-gray-300 text-[10px]" :class="isCollapsed(cat) ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+                    </h3>
                     
-                    <draggable :list="getShopItemsByCat(cat)" item-key="id" handle=".shop-card" @end="saveOrder('shop')" class="grid grid-cols-2 gap-3">
-                        <template #item="{element}">
-                            <div @click="openShopModal(element)" class="shop-card card-pop overflow-hidden border border-gray-50 flex flex-col cursor-grab active:cursor-grabbing">
-                                <div v-if="element.checked" class="checked-overlay">
-                                    <i class="fas fa-check-circle text-white text-2xl"></i>
+                    <div v-show="!isCollapsed(cat)">
+                        <draggable :list="getShopItemsByCat(cat)" item-key="id" handle=".shop-card" @end="saveOrder('shop')" class="grid grid-cols-2 gap-3">
+                            <template #item="{element}">
+                                <div @click="openShopModal(element)" class="shop-card card-pop overflow-hidden border border-gray-50 flex flex-col cursor-grab active:cursor-grabbing">
+                                    <div v-if="element.checked" class="checked-overlay">
+                                        <i class="fas fa-check-circle text-white text-2xl"></i>
+                                    </div>
+                                    
+                                    <div class="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden pointer-events-none">
+                                        <img v-if="element.image" :src="element.image" class="w-full h-full object-cover">
+                                        <i v-else class="fas fa-shopping-bag text-gray-200 text-2xl"></i>
+                                    </div>
+                                    <div class="p-3 pointer-events-none">
+                                        <h4 class="font-bold text-gray-800 text-xs truncate">{{element.name}}</h4>
+                                        <p v-if="element.memo" class="text-[9px] text-gray-400 mt-1 truncate font-medium">{{element.memo}}</p>
+                                    </div>
+                                    <button @click.stop="toggleShopStatus(element)" class="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-md bg-white/95 z-20" :class="element.checked ? 'pink-theme text-white' : 'text-gray-300'"><i class="fas fa-check text-[10px]"></i></button>
                                 </div>
-                                
-                                <div class="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden pointer-events-none">
-                                    <img v-if="element.image" :src="element.image" class="w-full h-full object-cover">
-                                    <i v-else class="fas fa-shopping-bag text-gray-200 text-2xl"></i>
-                                </div>
-                                <div class="p-3 pointer-events-none">
-                                    <h4 class="font-bold text-gray-800 text-xs truncate">{{element.name}}</h4>
-                                    <p v-if="element.memo" class="text-[9px] text-gray-400 mt-1 truncate font-medium">{{element.memo}}</p>
-                                </div>
-                                <button @click.stop="toggleShopStatus(element)" class="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-md bg-white/95 z-20" :class="element.checked ? 'pink-theme text-white' : 'text-gray-300'"><i class="fas fa-check text-[10px]"></i></button>
-                            </div>
-                        </template>
-                    </draggable>
+                            </template>
+                        </draggable>
+                    </div>
                 </div>
                 <button @click="openShopModal()" class="w-full py-4 border-2 border-dashed border-rose-100 rounded-[24px] text-rose-200 font-bold">+ 新增待買</button>
 
@@ -348,6 +353,7 @@
                     chart: null,
                     dateConfig: [{date: '23', day: 'THU'}, {date: '24', day: 'FRI'}, {date: '25', day: 'SAT'}, {date: '26', day: 'SUN'}],
                     modals: { plan: false, wallet: false, shop: false, memo: false, summary: false },
+                    collapsedCats: [], // 紀錄被摺疊的類別
                     form: {
                         plan: { time: '09:00', place: '', note: '', transitType: '', transitTime: '', transitUnit: 'm', stayTime: '', stayUnit: 'm', mapUrl: '' },
                         wallet: { type: '支出', amount: '', currency: 'JPY', name: '', method: '現金', category: '食物', tag: '實際支出', memo: '', rate: 0 },
@@ -376,8 +382,19 @@
                         .filter(i => i.dayIndex === this.selectedDay).sort((a,b) => (a.time||'').localeCompare(b.time||''));
                 },
                 walletList: {
-                    get() { return Object.entries(this.dbData.walletList || {}).map(([id, val]) => ({ id, ...val })).sort((a,b) => (a.order || 0) - (b.order || 0)); },
-                    set(val) { }
+                    get() { 
+                        return Object.entries(this.dbData.walletList || {})
+                            .map(([id, val]) => ({ id, ...val }))
+                            .sort((a,b) => (a.order || 0) - (b.order || 0)); 
+                    },
+                    set(val) {
+                        // 當拖拽發生時，更新本地資料的 order
+                        val.forEach((item, index) => {
+                            if (this.dbData.walletList[item.id]) {
+                                this.dbData.walletList[item.id].order = index;
+                            }
+                        });
+                    }
                 },
                 actualSpent() { return this.walletList.filter(i => i.tag === '實際支出' && i.type === '支出').reduce((a,c) => a + this.getJPY(c), 0); },
                 actualSpentTWD() { return this.walletList.filter(i => i.tag === '實際支出' && i.type === '支出').reduce((a,c) => a + this.getTWD(c), 0); },
@@ -409,6 +426,14 @@
                 getTransitArray(t) { return t ? t.split(',') : []; },
                 getCategoryIcon(cat) { return { '食物': 'fas fa-utensils', '購物': 'fas fa-shopping-bag', '美妝': 'fas fa-magic', '交通': 'fas fa-bus', '其他': 'fas fa-ellipsis-h' }[cat] || 'fas fa-coins'; },
                 
+                // 摺疊邏輯
+                toggleCat(cat) {
+                    const idx = this.collapsedCats.indexOf(cat);
+                    if (idx > -1) this.collapsedCats.splice(idx, 1);
+                    else this.collapsedCats.push(cat);
+                },
+                isCollapsed(cat) { return this.collapsedCats.includes(cat); },
+
                 initChart() {
                     const ctx = document.getElementById('expenseChart');
                     if (!ctx) return;
@@ -460,7 +485,6 @@
                 editInitialCash() { const res = prompt('初始日幣現鈔：', this.dbData.initialCash || 0); if (res !== null) db.ref(DATA_PATH).child('initialCash').set(Number(res)); },
                 handleImageUpload(e) { const file = e.target.files[0]; if(!file) return; const r = new FileReader(); r.onload = (ev) => this.form.shop.image = ev.target.result; r.readAsDataURL(file); },
                 
-                // 修改點 4: 待買清單排序邏輯 (未勾選優先 -> order)
                 getShopItemsByCat(cat) { 
                     return Object.entries(this.dbData.shopList || {})
                         .map(([id, val]) => ({ id, ...val }))
@@ -473,7 +497,7 @@
                 toggleShopStatus(item) { 
                     db.ref(DATA_PATH).child('shopList').child(item.id).update({ 
                         checked: !item.checked,
-                        order: Date.now() // 勾選後重置 order 讓它排到最後
+                        order: Date.now() 
                     }); 
                 },
 
@@ -481,7 +505,6 @@
                     const data = {...this.form[type]};
                     const id = data.id || Date.now().toString();
                     if(type === 'plan') data.dayIndex = this.selectedDay;
-                    // 修改點 3: 記帳確認匯率
                     if(type === 'wallet' && !data.id) {
                         data.rate = this.exchangeRate;
                     }
