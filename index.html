@@ -24,7 +24,13 @@
             --pink-light: #F2E3E4; 
             --bg-gray: #F8FBFB; 
         }
-        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background-color: var(--bg-gray); -webkit-tap-highlight-color: transparent; letter-spacing: 0.01em; }
+        /* 這裡幫妳把 letter-spacing 調整為 0.05em，讓字體更舒展 */
+        body { 
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; 
+            background-color: var(--bg-gray); 
+            -webkit-tap-highlight-color: transparent; 
+            letter-spacing: 0.05em; 
+        }
         .pink-theme { background-color: var(--pink-main); }
         .pink-text { color: var(--pink-main); }
         .active-tab { color: var(--pink-main) !important; font-weight: bold; }
