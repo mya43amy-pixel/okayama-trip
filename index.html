@@ -57,6 +57,10 @@
             z-index: 10;
             pointer-events: none;
         }
+        /* 讓拖拽時的項目半透明 */
+        .sortable-ghost {
+            opacity: 0.3;
+        }
     </style>
 </head>
 <body>
@@ -199,15 +203,21 @@
                 <button @click="openShopModal()" class="w-full py-4 border-2 border-dashed border-rose-100 rounded-[24px] text-rose-200 font-bold">+ 新增待買</button>
 
                 <div class="pt-6 border-t border-gray-100">
-                    <h3 class="font-black text-gray-700 text-sm px-2 mb-4 uppercase tracking-widest">Memo / Links</h3>
-                    <div v-for="m in sortedMemoList" :key="m.id" class="card-pop p-4 mb-3 flex items-start gap-3 relative">
-                        <div class="flex-1" @click="openMemoModal(m)">
-                            <img v-if="m.image" :src="m.image" class="w-full rounded-xl mb-3 block">
-                            <p class="text-sm text-gray-600 whitespace-pre-wrap font-medium">{{m.text}}</p>
-                            <a v-if="m.link" :href="m.link" target="_blank" @click.stop class="text-[10px] pink-text font-bold mt-2 block break-all"><i class="fas fa-link mr-1"></i>{{m.link}}</a>
-                        </div>
-                        <button @click="deleteData('memo', m.id)" class="text-gray-200 text-xs"><i class="fas fa-times"></i></button>
-                    </div>
+                    <h3 class="font-black text-gray-700 text-sm px-2 mb-4 uppercase tracking-widest">Memo / Links (長按可排序)</h3>
+                    
+                    <draggable v-model="memoList" item-key="id" delay="200" @end="saveOrder('memo')" class="space-y-3">
+                        <template #item="{element}">
+                            <div class="card-pop p-4 flex items-start gap-3 relative cursor-grab active:cursor-grabbing">
+                                <div class="flex-1" @click="openMemoModal(element)">
+                                    <img v-if="element.image" :src="element.image" class="w-full rounded-xl mb-3 block pointer-events-none">
+                                    <p class="text-sm text-gray-600 whitespace-pre-wrap font-medium pointer-events-none">{{element.text}}</p>
+                                    <a v-if="element.link" :href="element.link" target="_blank" @click.stop class="text-[10px] pink-text font-bold mt-2 block break-all relative z-30"><i class="fas fa-link mr-1"></i>{{element.link}}</a>
+                                </div>
+                                <button @click.stop="deleteData('memo', element.id)" class="text-gray-200 text-xs shrink-0 relative z-30"><i class="fas fa-times"></i></button>
+                            </div>
+                        </template>
+                    </draggable>
+
                     <button @click="openMemoModal()" class="w-full py-4 bg-rose-50 text-rose-400 rounded-[24px] font-bold mt-4">+ 新增 MEMO</button>
                 </div>
             </div>
@@ -410,6 +420,21 @@
                         });
                     }
                 },
+                // 新增 Memo 的排序 Computed
+                memoList: {
+                    get() {
+                        return Object.entries(this.dbData.memoList || {})
+                            .map(([id, val]) => ({ id, ...val }))
+                            .sort((a,b) => (a.order || 0) - (b.order || 0));
+                    },
+                    set(val) {
+                        val.forEach((item, index) => {
+                            if (this.dbData.memoList[item.id]) {
+                                this.dbData.memoList[item.id].order = index;
+                            }
+                        });
+                    }
+                },
                 actualSpent() { return this.walletList.filter(i => i.tag === '實際支出' && i.type === '支出').reduce((a,c) => a + this.getJPY(c), 0); },
                 actualSpentTWD() { return this.walletList.filter(i => i.tag === '實際支出' && i.type === '支出').reduce((a,c) => a + this.getTWD(c), 0); },
                 preTripSpent() { return this.walletList.filter(i => i.tag === '行前支出' && i.type === '支出').reduce((a,c) => a + this.getJPY(c), 0); },
@@ -419,8 +444,7 @@
                     const income = this.walletList.filter(i => i.type === '收入' && i.method === '現金' && i.currency === 'JPY').reduce((a,c) => a + Number(c.amount), 0);
                     const expense = this.walletList.filter(i => i.type === '支出' && i.method === '現金' && i.currency === 'JPY').reduce((a,c) => a + Number(c.amount), 0);
                     return base + income - expense;
-                },
-                sortedMemoList() { return Object.entries(this.dbData.memoList || {}).map(([id, val]) => ({ id, ...val })).sort((a,b) => (b.id - a.id)); }
+                }
             },
             mounted() {
                 db.ref(DATA_PATH).on('value', snap => { if(snap.exists()) this.dbData = snap.val(); });
@@ -522,7 +546,8 @@
                     if(type === 'wallet' && !data.id) {
                         data.rate = this.exchangeRate;
                     }
-                    if((type === 'wallet' || type === 'shop') && !data.id) data.order = Date.now();
+                    // 新增 Memo 時也給予 order
+                    if((type === 'wallet' || type === 'shop' || type === 'memo') && !data.id) data.order = Date.now();
                     delete data.id;
                     db.ref(DATA_PATH).child(type + 'List').child(id).set(data).then(() => this.modals[type] = false);
                 },
@@ -530,7 +555,7 @@
                 saveSummary() { db.ref(DATA_PATH).child('planSummary').child(this.selectedDay).set(this.tempSummary).then(() => this.modals.summary = false); },
                 
                 saveOrder(type) {
-                    const list = type === 'wallet' ? this.walletList : Object.values(this.dbData.shopList || {});
+                    const list = type === 'wallet' ? this.walletList : (type === 'memo' ? this.memoList : Object.values(this.dbData.shopList || {}));
                     list.forEach((item, index) => { 
                         if(item.id) db.ref(DATA_PATH).child(type + 'List').child(item.id).update({ order: index }); 
                     });
