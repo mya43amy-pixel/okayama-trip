@@ -135,7 +135,7 @@
                     </div>
                 </div>
 
-                <draggable v-model="walletList" item-key="id" handle=".drag-handle" @end="saveOrder('wallet')" class="space-y-3">
+                <draggable v-model="walletList" item-key="id" handle=".drag-handle" delay="200" delay-on-touch-only="true" @end="saveOrder('wallet')" class="space-y-3">
                     <template #item="{element}">
                         <div @click="openWalletModal(element)" class="bill-card bg-white p-4 rounded-2xl border border-gray-50 shadow-sm flex items-center gap-4">
                             <div class="drag-handle w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" 
@@ -179,7 +179,16 @@
                     </h3>
                     
                     <div v-show="!isCollapsed(cat)">
-                        <draggable :list="getShopItemsByCat(cat)" item-key="id" handle=".shop-card" @end="saveOrder('shop')" class="grid grid-cols-2 gap-3">
+                        <draggable 
+                            :list="getShopItemsByCat(cat)" 
+                            item-key="id" 
+                            delay="200" 
+                            delay-on-touch-only="true"
+                            animation="200"
+                            ghost-class="opacity-50"
+                            @end="saveOrder('shop', getShopItemsByCat(cat))" 
+                            class="grid grid-cols-2 gap-3"
+                        >
                             <template #item="{element}">
                                 <div @click="openShopModal(element)" class="shop-card card-pop overflow-hidden border border-gray-50 flex flex-col cursor-grab active:cursor-grabbing">
                                     <div v-if="element.checked" class="checked-overlay">
@@ -205,7 +214,7 @@
                 <div class="pt-6 border-t border-gray-100">
                     <h3 class="font-black text-gray-700 text-sm px-2 mb-4 uppercase tracking-widest">Memo / Links (長按可排序)</h3>
                     
-                    <draggable v-model="memoList" item-key="id" delay="200" @end="saveOrder('memo')" class="space-y-3">
+                    <draggable v-model="memoList" item-key="id" delay="200" delay-on-touch-only="true" animation="200" @end="saveOrder('memo')" class="space-y-3">
                         <template #item="{element}">
                             <div class="card-pop p-4 flex items-start gap-3 relative cursor-grab active:cursor-grabbing">
                                 <div class="flex-1" @click="openMemoModal(element)">
@@ -420,7 +429,6 @@
                         });
                     }
                 },
-                // 新增 Memo 的排序 Computed
                 memoList: {
                     get() {
                         return Object.entries(this.dbData.memoList || {})
@@ -528,6 +536,7 @@
                         .map(([id, val]) => ({ id, ...val }))
                         .filter(i => i.category === cat)
                         .sort((a, b) => {
+                            // 先根據 checked 排序，再根據 order
                             if (a.checked !== b.checked) return a.checked ? 1 : -1;
                             return (a.order || 0) - (b.order || 0);
                         }); 
@@ -546,7 +555,6 @@
                     if(type === 'wallet' && !data.id) {
                         data.rate = this.exchangeRate;
                     }
-                    // 新增 Memo 時也給予 order
                     if((type === 'wallet' || type === 'shop' || type === 'memo') && !data.id) data.order = Date.now();
                     delete data.id;
                     db.ref(DATA_PATH).child(type + 'List').child(id).set(data).then(() => this.modals[type] = false);
@@ -554,10 +562,23 @@
                 deleteData(type, id) { if(confirm('確定刪除？')) { db.ref(DATA_PATH).child(type + 'List').child(id).remove().then(() => this.modals[type] = false); } },
                 saveSummary() { db.ref(DATA_PATH).child('planSummary').child(this.selectedDay).set(this.tempSummary).then(() => this.modals.summary = false); },
                 
-                saveOrder(type) {
-                    const list = type === 'wallet' ? this.walletList : (type === 'memo' ? this.memoList : Object.values(this.dbData.shopList || {}));
+                // 優化後的排序存檔邏輯
+                saveOrder(type, customList = null) {
+                    let list = [];
+                    if (customList) {
+                        list = customList;
+                    } else if (type === 'wallet') {
+                        list = this.walletList;
+                    } else if (type === 'memo') {
+                        list = this.memoList;
+                    } else {
+                        list = Object.values(this.dbData.shopList || {});
+                    }
+
                     list.forEach((item, index) => { 
-                        if(item.id) db.ref(DATA_PATH).child(type + 'List').child(item.id).update({ order: index }); 
+                        if(item.id) {
+                            db.ref(DATA_PATH).child(type + 'List').child(item.id).update({ order: index }); 
+                        }
                     });
                 },
 
