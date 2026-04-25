@@ -29,6 +29,9 @@
             background-color: var(--bg-gray); 
             -webkit-tap-highlight-color: transparent; 
             letter-spacing: 0.05em; 
+            /* 防止行動端長按彈出選單影響拖拽 */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
         }
         .pink-theme { background-color: var(--pink-main); }
         .pink-text { color: var(--pink-main); }
@@ -57,10 +60,11 @@
             z-index: 10;
             pointer-events: none;
         }
-        /* 讓拖拽時的項目半透明 */
         .sortable-ghost {
             opacity: 0.3;
         }
+        /* 讓 input 可以被選取，不被 body 的 user-select 影響 */
+        input, textarea, select { -webkit-user-select: text; user-select: text; }
     </style>
 </head>
 <body>
@@ -135,7 +139,7 @@
                     </div>
                 </div>
 
-                <draggable v-model="walletList" item-key="id" handle=".drag-handle" delay="200" delay-on-touch-only="true" @end="saveOrder('wallet')" class="space-y-3">
+                <draggable v-model="walletList" item-key="id" handle=".drag-handle" :delay="200" :delay-on-touch-only="true" :force-fallback="true" :fallback-tolerance="3" @end="saveOrder('wallet')" class="space-y-3">
                     <template #item="{element}">
                         <div @click="openWalletModal(element)" class="bill-card bg-white p-4 rounded-2xl border border-gray-50 shadow-sm flex items-center gap-4">
                             <div class="drag-handle w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" 
@@ -182,8 +186,10 @@
                         <draggable 
                             :list="getShopItemsByCat(cat)" 
                             item-key="id" 
-                            delay="200" 
-                            delay-on-touch-only="true"
+                            :delay="200" 
+                            :delay-on-touch-only="true"
+                            :force-fallback="true"
+                            :fallback-tolerance="3"
                             animation="200"
                             ghost-class="opacity-50"
                             @end="saveOrder('shop', getShopItemsByCat(cat))" 
@@ -214,7 +220,7 @@
                 <div class="pt-6 border-t border-gray-100">
                     <h3 class="font-black text-gray-700 text-sm px-2 mb-4 uppercase tracking-widest">Memo / Links (長按可排序)</h3>
                     
-                    <draggable v-model="memoList" item-key="id" delay="200" delay-on-touch-only="true" animation="200" @end="saveOrder('memo')" class="space-y-3">
+                    <draggable v-model="memoList" item-key="id" :delay="200" :delay-on-touch-only="true" :force-fallback="true" :fallback-tolerance="3" animation="200" @end="saveOrder('memo')" class="space-y-3">
                         <template #item="{element}">
                             <div class="card-pop p-4 flex items-start gap-3 relative cursor-grab active:cursor-grabbing">
                                 <div class="flex-1" @click="openMemoModal(element)">
@@ -536,7 +542,6 @@
                         .map(([id, val]) => ({ id, ...val }))
                         .filter(i => i.category === cat)
                         .sort((a, b) => {
-                            // 先根據 checked 排序，再根據 order
                             if (a.checked !== b.checked) return a.checked ? 1 : -1;
                             return (a.order || 0) - (b.order || 0);
                         }); 
@@ -562,19 +567,22 @@
                 deleteData(type, id) { if(confirm('確定刪除？')) { db.ref(DATA_PATH).child(type + 'List').child(id).remove().then(() => this.modals[type] = false); } },
                 saveSummary() { db.ref(DATA_PATH).child('planSummary').child(this.selectedDay).set(this.tempSummary).then(() => this.modals.summary = false); },
                 
-                // 優化後的排序存檔邏輯
+                // 改良後的排序存檔邏輯
                 saveOrder(type, customList = null) {
                     let list = [];
-                    if (customList) {
+                    // 針對 ShopList 的分組排序進行優化處理
+                    if (type === 'shop' && customList) {
                         list = customList;
                     } else if (type === 'wallet') {
                         list = this.walletList;
                     } else if (type === 'memo') {
                         list = this.memoList;
                     } else {
-                        list = Object.values(this.dbData.shopList || {});
+                        // 兜底處理
+                        list = Object.values(this.dbData[type + 'List'] || {});
                     }
 
+                    // 批量更新 Firebase 中的 order 欄位
                     list.forEach((item, index) => { 
                         if(item.id) {
                             db.ref(DATA_PATH).child(type + 'List').child(item.id).update({ order: index }); 
