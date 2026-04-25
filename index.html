@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>okayama V10</title>
+    <title>2026 Okayama Trip 🍑 V10</title>
     <link rel="apple-touch-icon" href="icon.png.JPG">
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -24,7 +24,6 @@
             --pink-light: #F2E3E4; 
             --bg-gray: #F8FBFB; 
         }
-        /* 這裡幫妳把 letter-spacing 調整為 0.05em，讓字體更舒展 */
         body { 
             font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; 
             background-color: var(--bg-gray); 
@@ -203,6 +202,7 @@
                     <h3 class="font-black text-gray-700 text-sm px-2 mb-4 uppercase tracking-widest">Memo / Links</h3>
                     <div v-for="m in sortedMemoList" :key="m.id" class="card-pop p-4 mb-3 flex items-start gap-3 relative">
                         <div class="flex-1" @click="openMemoModal(m)">
+                            <img v-if="m.image" :src="m.image" class="w-full rounded-xl mb-3 block">
                             <p class="text-sm text-gray-600 whitespace-pre-wrap font-medium">{{m.text}}</p>
                             <a v-if="m.link" :href="m.link" target="_blank" @click.stop class="text-[10px] pink-text font-bold mt-2 block break-all"><i class="fas fa-link mr-1"></i>{{m.link}}</a>
                         </div>
@@ -314,10 +314,17 @@
         </div>
 
         <div v-if="modals.memo" class="fixed inset-0 bg-black/60 z-[60] flex items-end">
-            <div class="bg-white w-full rounded-t-[40px] p-8 pb-12">
+            <div class="bg-white w-full rounded-t-[40px] p-8 pb-12 max-h-[90vh] overflow-y-auto">
                 <h3 class="font-black mb-6 text-lg">MEMO</h3>
-                <textarea v-model="form.memo.text" class="input-round text-sm mb-4 font-medium" rows="6"></textarea>
-                <input v-model="form.memo.link" class="input-round text-xs mb-4 font-medium" placeholder="連結">
+                <div class="flex justify-center mb-6">
+                    <label class="w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100 flex items-center justify-center cursor-pointer overflow-hidden">
+                        <img v-if="form.memo.image" :src="form.memo.image" class="w-full h-full object-contain">
+                        <i v-else class="fas fa-camera text-gray-200 text-2xl"></i>
+                        <input type="file" @change="handleMemoImageUpload" class="hidden" accept="image/*">
+                    </label>
+                </div>
+                <textarea v-model="form.memo.text" class="input-round text-sm mb-4 font-medium" rows="4" placeholder="輸入筆記..."></textarea>
+                <input v-model="form.memo.link" class="input-round text-xs mb-4 font-medium" placeholder="連結 (選填)">
                 <div class="flex gap-4">
                     <button @click="modals.memo = false" class="flex-1 py-4 bg-gray-100 rounded-2xl font-bold">取消</button>
                     <button @click="saveData('memo')" class="flex-[2] py-4 pink-theme text-white rounded-2xl font-black">儲存</button>
@@ -361,12 +368,12 @@
                     chart: null,
                     dateConfig: [{date: '23', day: 'THU'}, {date: '24', day: 'FRI'}, {date: '25', day: 'SAT'}, {date: '26', day: 'SUN'}],
                     modals: { plan: false, wallet: false, shop: false, memo: false, summary: false },
-                    collapsedCats: [], // 紀錄被摺疊的類別
+                    collapsedCats: ['美妝', '伴手禮', '服飾', '食物', '其他'], 
                     form: {
                         plan: { time: '09:00', place: '', note: '', transitType: '', transitTime: '', transitUnit: 'm', stayTime: '', stayUnit: 'm', mapUrl: '' },
                         wallet: { type: '支出', amount: '', currency: 'JPY', name: '', method: '現金', category: '食物', tag: '實際支出', memo: '', rate: 0 },
                         shop: { name: '', category: '美妝', image: '', memo: '', checked: false },
-                        memo: { text: '', link: '' }
+                        memo: { text: '', link: '', image: '' }
                     },
                     dbData: { planList: {}, walletList: {}, shopList: {}, memoList: {}, planSummary: {}, initialCash: 0 },
                     tempSummary: ''
@@ -396,7 +403,6 @@
                             .sort((a,b) => (a.order || 0) - (b.order || 0)); 
                     },
                     set(val) {
-                        // 當拖拽發生時，更新本地資料的 order
                         val.forEach((item, index) => {
                             if (this.dbData.walletList[item.id]) {
                                 this.dbData.walletList[item.id].order = index;
@@ -434,7 +440,6 @@
                 getTransitArray(t) { return t ? t.split(',') : []; },
                 getCategoryIcon(cat) { return { '食物': 'fas fa-utensils', '購物': 'fas fa-shopping-bag', '美妝': 'fas fa-magic', '交通': 'fas fa-bus', '其他': 'fas fa-ellipsis-h' }[cat] || 'fas fa-coins'; },
                 
-                // 摺疊邏輯
                 toggleCat(cat) {
                     const idx = this.collapsedCats.indexOf(cat);
                     if (idx > -1) this.collapsedCats.splice(idx, 1);
@@ -487,11 +492,12 @@
                 
                 openWalletModal(item = null) { this.form.wallet = item ? {...item} : {type: '支出', amount: '', currency: 'JPY', name: '', method: '現金', category: '食物', tag: '實際支出', memo: '', rate: 0}; this.modals.wallet = true; },
                 openShopModal(item = null) { this.form.shop = item ? {...item} : {name: '', category: '美妝', image: '', memo: '', checked: false}; this.modals.shop = true; },
-                openMemoModal(item = null) { this.form.memo = item ? {...item} : {text: '', link: ''}; this.modals.memo = true; },
+                openMemoModal(item = null) { this.form.memo = item ? {...item} : {text: '', link: '', image: ''}; this.modals.memo = true; },
                 openSummaryModal() { this.tempSummary = this.dailySummaries[this.selectedDay] || ''; this.modals.summary = true; },
                 
                 editInitialCash() { const res = prompt('初始日幣現鈔：', this.dbData.initialCash || 0); if (res !== null) db.ref(DATA_PATH).child('initialCash').set(Number(res)); },
                 handleImageUpload(e) { const file = e.target.files[0]; if(!file) return; const r = new FileReader(); r.onload = (ev) => this.form.shop.image = ev.target.result; r.readAsDataURL(file); },
+                handleMemoImageUpload(e) { const file = e.target.files[0]; if(!file) return; const r = new FileReader(); r.onload = (ev) => this.form.memo.image = ev.target.result; r.readAsDataURL(file); },
                 
                 getShopItemsByCat(cat) { 
                     return Object.entries(this.dbData.shopList || {})
