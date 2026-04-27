@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>okayama V10</title>
+    <title>okayama V11</title>
     <link rel="apple-touch-icon" href="icon.png.JPG">
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -57,7 +57,6 @@
             z-index: 10;
             pointer-events: none;
         }
-        /* 讓拖拽時的項目半透明 */
         .sortable-ghost {
             opacity: 0.3;
         }
@@ -179,20 +178,20 @@
                     </h3>
                     
                     <div v-show="!isCollapsed(cat)">
-                        <draggable :list="getShopItemsByCat(cat)" item-key="id" handle=".shop-card" @end="saveOrder('shop')" class="grid grid-cols-2 gap-3">
+                        <draggable :list="getShopItemsByCat(cat)" item-key="id" @end="saveOrder('shop')" class="grid grid-cols-2 gap-3">
                             <template #item="{element}">
                                 <div @click="openShopModal(element)" class="shop-card card-pop overflow-hidden border border-gray-50 flex flex-col cursor-grab active:cursor-grabbing">
                                     <div v-if="element.checked" class="checked-overlay">
                                         <i class="fas fa-check-circle text-white text-2xl"></i>
                                     </div>
                                     
-                                    <div class="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden pointer-events-none">
-                                        <img v-if="element.image" :src="element.image" class="w-full h-full object-cover">
-                                        <i v-else class="fas fa-shopping-bag text-gray-200 text-2xl"></i>
+                                    <div class="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+                                        <img v-if="element.image" :src="element.image" class="w-full h-full object-cover pointer-events-none">
+                                        <i v-else class="fas fa-shopping-bag text-gray-200 text-2xl pointer-events-none"></i>
                                     </div>
-                                    <div class="p-3 pointer-events-none">
-                                        <h4 class="font-bold text-gray-800 text-xs truncate">{{element.name}}</h4>
-                                        <p v-if="element.memo" class="text-[9px] text-gray-400 mt-1 truncate font-medium">{{element.memo}}</p>
+                                    <div class="p-3">
+                                        <h4 class="font-bold text-gray-800 text-xs truncate pointer-events-none">{{element.name}}</h4>
+                                        <p v-if="element.memo" class="text-[9px] text-gray-400 mt-1 truncate font-medium pointer-events-none">{{element.memo}}</p>
                                     </div>
                                     <button @click.stop="toggleShopStatus(element)" class="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-md bg-white/95 z-20" :class="element.checked ? 'pink-theme text-white' : 'text-gray-300'"><i class="fas fa-check text-[10px]"></i></button>
                                 </div>
@@ -203,7 +202,7 @@
                 <button @click="openShopModal()" class="w-full py-4 border-2 border-dashed border-rose-100 rounded-[24px] text-rose-200 font-bold">+ 新增待買</button>
 
                 <div class="pt-6 border-t border-gray-100">
-                    <h3 class="font-black text-gray-700 text-sm px-2 mb-4 uppercase tracking-widest">Memo / Links (長按可排序)</h3>
+                    <h3 class="font-black text-gray-700 text-sm px-2 mb-4 uppercase tracking-widest">Memo / Links</h3>
                     
                     <draggable v-model="memoList" item-key="id" delay="200" @end="saveOrder('memo')" class="space-y-3">
                         <template #item="{element}">
@@ -420,7 +419,6 @@
                         });
                     }
                 },
-                // 新增 Memo 的排序 Computed
                 memoList: {
                     get() {
                         return Object.entries(this.dbData.memoList || {})
@@ -462,7 +460,7 @@
                 },
                 getTransitIcon(t) { return {walk:'fas fa-walking', taxi:'fas fa-taxi', bus:'fas fa-bus', train:'fas fa-train-subway', other:'fas fa-plane'}[t]; },
                 getTransitArray(t) { return t ? t.split(',') : []; },
-                getCategoryIcon(cat) { return { '食物': 'fas fa-utensils', '購物': 'fas fa-shopping-bag', '美妝': 'fas fa-magic', '交通': 'fas fa-bus', '其他': 'fas fa-ellipsis-h' }[cat] || 'fas fa-coins'; },
+                getCategoryIcon(cat) { return { '食物': 'fas fa-utensils', '購物': 'fas fa-shopping-bag', '美妝': 'fas fa-magic', '交通': 'fas fa-bus', '住宿': 'fas fa-bed', '其他': 'fas fa-ellipsis-h' }[cat] || 'fas fa-coins'; },
                 
                 toggleCat(cat) {
                     const idx = this.collapsedCats.indexOf(cat);
@@ -471,25 +469,34 @@
                 },
                 isCollapsed(cat) { return this.collapsedCats.includes(cat); },
 
+                // 1. 調整圓餅圖說明文字與排序
                 initChart() {
                     const ctx = document.getElementById('expenseChart');
                     if (!ctx) return;
                     if (this.chart) this.chart.destroy();
                     
                     const categories = ['食物', '購物', '交通', '住宿', '其他'];
-                    const data = categories.map(cat => {
-                        return this.walletList
+                    // 計算各類別總額並建立物件陣列
+                    let chartData = categories.map(cat => {
+                        const amount = this.walletList
                             .filter(i => i.type === '支出' && i.category === cat)
                             .reduce((a, c) => a + this.getJPY(c), 0);
+                        return { label: cat, value: amount };
                     });
+
+                    // 依照金額從大到小排序
+                    chartData.sort((a, b) => b.value - a.value);
+
+                    // 定義類別對應顏色
+                    const colorMap = { '食物': '#DBA9AB', '購物': '#F2E3E4', '交通': '#6A9B9B', '住宿': '#D1D5DB', '其他': '#9CA3AF' };
 
                     this.chart = new Chart(ctx, {
                         type: 'doughnut',
                         data: {
-                            labels: categories,
+                            labels: chartData.map(d => `${d.label} ¥${this.formatNum(d.value)}`),
                             datasets: [{
-                                data: data,
-                                backgroundColor: ['#DBA9AB', '#F2E3E4', '#6A9B9B', '#D1D5DB', '#9CA3AF'],
+                                data: chartData.map(d => d.value),
+                                backgroundColor: chartData.map(d => colorMap[d.label]),
                                 borderWidth: 0
                             }]
                         },
@@ -528,6 +535,7 @@
                         .map(([id, val]) => ({ id, ...val }))
                         .filter(i => i.category === cat)
                         .sort((a, b) => {
+                            // 先按勾選狀態排（未勾選在前），再按自訂順序排
                             if (a.checked !== b.checked) return a.checked ? 1 : -1;
                             return (a.order || 0) - (b.order || 0);
                         }); 
@@ -535,7 +543,7 @@
                 toggleShopStatus(item) { 
                     db.ref(DATA_PATH).child('shopList').child(item.id).update({ 
                         checked: !item.checked,
-                        order: Date.now() 
+                        order: Date.now() // 打勾時給予最新的時間戳使其沉底
                     }); 
                 },
 
@@ -546,7 +554,6 @@
                     if(type === 'wallet' && !data.id) {
                         data.rate = this.exchangeRate;
                     }
-                    // 新增 Memo 時也給予 order
                     if((type === 'wallet' || type === 'shop' || type === 'memo') && !data.id) data.order = Date.now();
                     delete data.id;
                     db.ref(DATA_PATH).child(type + 'List').child(id).set(data).then(() => this.modals[type] = false);
@@ -554,8 +561,19 @@
                 deleteData(type, id) { if(confirm('確定刪除？')) { db.ref(DATA_PATH).child(type + 'List').child(id).remove().then(() => this.modals[type] = false); } },
                 saveSummary() { db.ref(DATA_PATH).child('planSummary').child(this.selectedDay).set(this.tempSummary).then(() => this.modals.summary = false); },
                 
+                // 3. 調整排序存儲邏輯
                 saveOrder(type) {
-                    const list = type === 'wallet' ? this.walletList : (type === 'memo' ? this.memoList : Object.values(this.dbData.shopList || {}));
+                    let list = [];
+                    if (type === 'wallet') {
+                        list = this.walletList;
+                    } else if (type === 'memo') {
+                        list = this.memoList;
+                    } else if (type === 'shop') {
+                        // 待買清單需要從原始數據中撈出所有項目來更新
+                        list = Object.entries(this.dbData.shopList || {}).map(([id, val]) => ({ id, ...val }));
+                        // draggable 會直接更新它綁定的 list，所以這裡不需要額外操作 list
+                    }
+                    
                     list.forEach((item, index) => { 
                         if(item.id) db.ref(DATA_PATH).child(type + 'List').child(item.id).update({ order: index }); 
                     });
