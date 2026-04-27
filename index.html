@@ -415,6 +415,7 @@
                             .sort((a,b) => (a.order || 0) - (b.order || 0)); 
                     },
                     set(val) {
+                        // 這裡只會更新本地資料，saveOrder 才會推送到 Firebase
                         val.forEach((item, index) => {
                             if (this.dbData.walletList[item.id]) {
                                 this.dbData.walletList[item.id].order = index;
@@ -506,14 +507,13 @@
                 handleImageUpload(e) { const file = e.target.files[0]; if(!file) return; const r = new FileReader(); r.onload = (ev) => this.form.shop.image = ev.target.result; r.readAsDataURL(file); },
                 handleMemoImageUpload(e) { const file = e.target.files[0]; if(!file) return; const r = new FileReader(); r.onload = (ev) => this.form.memo.image = ev.target.result; r.readAsDataURL(file); },
                 
-                // 修改點：簡化排序邏輯，只看 order
                 getShopItemsByCat(cat) { 
                     return Object.entries(this.dbData.shopList || {})
                         .map(([id, val]) => ({ id, ...val }))
                         .filter(i => i.category === cat)
                         .sort((a, b) => (a.order || 0) - (b.order || 0)); 
                 },
-                // 修改點：移除打勾強制沈底的 logic
+
                 toggleShopStatus(item) { 
                     db.ref(DATA_PATH).child('shopList').child(item.id).update({ 
                         checked: !item.checked
@@ -525,6 +525,7 @@
                     const id = data.id || Date.now().toString();
                     if(type === 'plan') data.dayIndex = this.selectedDay;
                     if(type === 'wallet' && !data.id) data.rate = this.exchangeRate;
+                    // 新增時給一個很大的 order，確保它在最下面
                     if((type === 'wallet' || type === 'shop' || type === 'memo') && !data.id) data.order = Date.now();
                     delete data.id;
                     db.ref(DATA_PATH).child(type + 'List').child(id).set(data).then(() => this.modals[type] = false);
@@ -532,20 +533,34 @@
                 deleteData(type, id) { if(confirm('確定刪除？')) { db.ref(DATA_PATH).child(type + 'List').child(id).remove().then(() => this.modals[type] = false); } },
                 saveSummary() { db.ref(DATA_PATH).child('planSummary').child(this.selectedDay).set(this.tempSummary).then(() => this.modals.summary = false); },
                 
-                // 修改點：新增專屬待買清單排序儲存
+                // 修正：待買清單排序儲存邏輯
                 saveShopOrder(cat, evt) {
-                    // 取得該分類目前顯示的列表（已經被 draggable 改變過順序）
-                    const list = this.getShopItemsByCat(cat);
-                    list.forEach((item, index) => {
-                        if(item.id) db.ref(DATA_PATH).child('shopList').child(item.id).update({ order: index });
+                    // 1. 從當前資料庫狀態取得該分類的所有物品
+                    const items = Object.entries(this.dbData.shopList || {})
+                        .map(([id, val]) => ({ id, ...val }))
+                        .filter(i => i.category === cat)
+                        .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+                    // 2. 模擬拖曳後的陣列變動
+                    const [movedItem] = items.splice(evt.oldIndex, 1);
+                    items.splice(evt.newIndex, 0, movedItem);
+
+                    // 3. 批次更新 order 存回 Firebase
+                    const updates = {};
+                    items.forEach((item, index) => {
+                        updates[`shopList/${item.id}/order`] = index;
                     });
+                    db.ref(DATA_PATH).update(updates);
                 },
 
+                // 修正：一般清單排序儲存邏輯
                 saveOrder(type) {
                     let list = (type === 'wallet') ? this.walletList : this.memoList;
+                    const updates = {};
                     list.forEach((item, index) => { 
-                        if(item.id) db.ref(DATA_PATH).child(type + 'List').child(item.id).update({ order: index }); 
+                        updates[`${type}List/${item.id}/order`] = index;
                     });
+                    db.ref(DATA_PATH).update(updates);
                 },
 
                 exportImage() {
