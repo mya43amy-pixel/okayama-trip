@@ -148,7 +148,7 @@
                                     <div class="text-right">
                                         <p class="font-black text-sm leading-none" :class="element.type === '收入' ? 'text-emerald-500' : 'text-gray-700'">
                                             <span class="text-[10px] mr-0.5 opacity-50">{{element.method === '刷卡' ? '💳' : '💰'}}</span>
-                                            {{element.type === '收入' ? '+' : '-'}} ¥{{formatNum(element.amount)}}
+                                            {{element.type === '收入' ? '+' : '-'}} {{element.currency === 'TWD' ? 'NT$' : '¥'}}{{formatNum(element.amount)}}
                                         </p>
                                         <p class="text-[10px] text-gray-300 font-bold mt-1">NT$ {{formatNum(getTWD(element))}}</p>
                                     </div>
