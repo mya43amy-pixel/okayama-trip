@@ -253,8 +253,8 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-black text-gray-400 mb-2">交通</label>
-                                <div class="flex gap-1 mb-3">
-                                    <button v-for="t in ['walk','taxi','bus','train','other']" :key="t" @click="toggleTransport(t)" 
+                                <div class="grid grid-cols-5 gap-2 mb-3">
+                                    <button v-for="t in ['walk','taxi','bus','train','ship','other']" :key="t" @click="toggleTransport(t)" 
                                             :class="form.plan.transitType.includes(t) ? 'pink-theme text-white' : 'bg-white text-gray-300'" 
                                             class="w-8 h-8 rounded-full flex items-center justify-center text-xs shadow-sm"><i :class="getTransitIcon(t)"></i></button>
                                 </div>
@@ -265,7 +265,7 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-black text-gray-400 mb-2">停留</label>
-                                <div class="flex gap-1 mt-11">
+                                <div class="flex gap-1 mt-14">
                                     <input type="number" v-model="form.plan.stayTime" class="input-round p-2 text-xs w-16 text-center">
                                     <select v-model="form.plan.stayUnit" class="input-round p-2 text-xs"><option value="m">m</option><option value="h">h</option></select>
                                 </div>
@@ -442,7 +442,6 @@
                         });
                     }
                 },
-                // 解決 Draggable 直接綁定 computed 衍生陣列導致卡住、同步失效的 Bug
                 shopCategoryLists() {
                     const categories = ['美妝', '伴手禮', '服飾', '食物', '其他'];
                     const res = {};
@@ -467,7 +466,6 @@
             },
             mounted() {
                 db.ref(DATA_PATH).on('value', snap => { if(snap.exists()) this.dbData = snap.val(); });
-                // 已移除原先會覆蓋固定匯率的 fetch API 呼叫，維持穩定的出國換匯設定
             },
             methods: {
                 formatNum(n) { return Math.round(Number(n)).toLocaleString(); },
@@ -479,7 +477,7 @@
                     const rate = item.rate || this.exchangeRate;
                     return item.currency === 'TWD' ? Number(item.amount) : Math.round(Number(item.amount) * rate); 
                 },
-                getTransitIcon(t) { return {walk:'fas fa-walking', taxi:'fas fa-taxi', bus:'fas fa-bus', train:'fas fa-train-subway', other:'fas fa-plane'}[t]; },
+                getTransitIcon(t) { return {walk:'fas fa-walking', taxi:'fas fa-taxi', bus:'fas fa-bus', train:'fas fa-train-subway', ship:'fas fa-ship', other:'fas fa-plane'}[t]; },
                 getTransitArray(t) { return t ? t.split(',') : []; },
                 getCategoryIcon(cat) { return { '食物': 'fas fa-utensils', '購物': 'fas fa-shopping-bag', '美妝': 'fas fa-magic', '交通': 'fas fa-bus', '住宿': 'fas fa-bed', '其他': 'fas fa-ellipsis-h' }[cat] || 'fas fa-coins'; },
                 
