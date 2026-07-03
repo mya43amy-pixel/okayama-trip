@@ -253,9 +253,9 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-black text-gray-400 mb-2">交通</label>
-                                <div class="grid grid-cols-5 gap-2 mb-3">
+                                <div class="flex flex-wrap gap-1.5 mb-3 max-w-[150px]">
                                     <button v-for="t in ['walk','taxi','bus','train','ship','other']" :key="t" @click="toggleTransport(t)" 
-                                            :class="form.plan.transitType && form.plan.transitType.split(',').includes(t) ? 'pink-theme text-white' : 'bg-white text-gray-300'" 
+                                            :class="form.plan.transitType.includes(t) ? 'pink-theme text-white' : 'bg-white text-gray-300'" 
                                             class="w-8 h-8 rounded-full flex items-center justify-center text-xs shadow-sm"><i :class="getTransitIcon(t)"></i></button>
                                 </div>
                                 <div class="flex gap-1">
@@ -265,7 +265,7 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-black text-gray-400 mb-2">停留</label>
-                                <div class="flex gap-1 mt-14">
+                                <div class="flex gap-1 mt-11">
                                     <input type="number" v-model="form.plan.stayTime" class="input-round p-2 text-xs w-16 text-center">
                                     <select v-model="form.plan.stayUnit" class="input-round p-2 text-xs"><option value="m">m</option><option value="h">h</option></select>
                                 </div>
@@ -281,7 +281,6 @@
                 </div>
             </div>
         </div>
-
         <div v-if="modals.wallet" class="fixed inset-0 bg-black/60 z-[60] flex items-end">
             <div class="bg-white w-full rounded-t-[40px] p-8 pb-12 overflow-y-auto max-h-[90vh]">
                 <div class="flex justify-between mb-8"><h3 class="text-xl font-black">記帳 💰</h3><button @click="modals.wallet = false" class="text-gray-400"><i class="fas fa-times"></i></button></div>
@@ -313,7 +312,6 @@
                 </div>
             </div>
         </div>
-
         <div v-if="modals.shop" class="fixed inset-0 bg-black/60 z-[60] flex items-end">
             <div class="bg-white w-full rounded-t-[40px] p-8 pb-12 overflow-y-auto max-h-[85vh]">
                 <div class="flex justify-between mb-8"><h3 class="text-xl font-black">待買 🛍️</h3><button @click="modals.shop = false" class="text-gray-400"><i class="fas fa-times"></i></button></div>
@@ -329,12 +327,11 @@
                     <textarea v-model="form.shop.memo" class="input-round h-20 text-xs font-medium" placeholder="備註"></textarea>
                     <div class="flex gap-4 mt-8">
                         <button v-if="form.shop.id" @click="deleteData('shop', form.shop.id)" class="flex-1 py-4 bg-red-50 text-red-400 rounded-2xl font-bold">刪除</button>
-                        <button @click="saveData('shop')" class="flex-[2] py-4 pink-theme text-white rounded-2xl font-black">儲4</button>
+                        <button @click="saveData('shop')" class="flex-[2] py-4 pink-theme text-white rounded-2xl font-black">儲存</button>
                     </div>
                 </div>
             </div>
         </div>
-
         <div v-if="modals.memo" class="fixed inset-0 bg-black/60 z-[60] flex items-end">
             <div class="bg-white w-full rounded-t-[40px] p-8 pb-12 max-h-[90vh] overflow-y-auto">
                 <h3 class="font-black mb-6 text-lg">MEMO</h3>
@@ -353,7 +350,6 @@
                 </div>
             </div>
         </div>
-
         <div v-if="modals.summary" class="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-6">
             <div class="bg-white w-full rounded-[35px] p-8 shadow-2xl">
                 <h3 class="text-lg font-black text-center mb-6">今日主題</h3>
@@ -364,7 +360,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     <script>
@@ -447,6 +442,7 @@
                         });
                     }
                 },
+                // 解決 Draggable 直接綁定 computed 衍生陣列導致卡住、同步失效的 Bug
                 shopCategoryLists() {
                     const categories = ['美妝', '伴手禮', '服飾', '食物', '其他'];
                     const res = {};
@@ -471,9 +467,10 @@
             },
             mounted() {
                 db.ref(DATA_PATH).on('value', snap => { if(snap.exists()) this.dbData = snap.val(); });
+                // 已移除原先會覆蓋固定匯率的 fetch API 呼張，維持穩定的出國換匯設定
             },
             methods: {
-                formatNum(n) n { return Math.round(Number(n)).toLocaleString(); },
+                formatNum(n) { return Math.round(Number(n)).toLocaleString(); },
                 getJPY(item) { 
                     const rate = item.rate || this.exchangeRate;
                     return item.currency === 'TWD' ? Math.round(Number(item.amount) / rate) : Number(item.amount); 
