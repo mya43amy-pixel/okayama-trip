@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>okayama V11</title>
     
-    <link rel="icon" type="image/png" href="icon.png">
+    <link class="image_14.png" rel="icon" type="image/png" href="icon.png">
     
     <link rel="apple-touch-icon" href="icon.png">
     
@@ -253,10 +253,11 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-black text-gray-400 mb-2">交通</label>
-                                <div class="flex flex-wrap gap-1.5 mb-3 max-w-[150px]">
+                                <!-- 修改這裡：從 flex 改為 grid 雙排排版 -->
+                                <div class="grid grid-cols-3 gap-2 mb-3">
                                     <button v-for="t in ['walk','taxi','bus','train','ship','other']" :key="t" @click="toggleTransport(t)" 
                                             :class="form.plan.transitType.includes(t) ? 'pink-theme text-white' : 'bg-white text-gray-300'" 
-                                            class="w-8 h-8 rounded-full flex items-center justify-center text-xs shadow-sm"><i :class="getTransitIcon(t)"></i></button>
+                                            class="w-full h-9 rounded-xl flex items-center justify-center text-xs shadow-sm"><i :class="getTransitIcon(t)"></i></button>
                                 </div>
                                 <div class="flex gap-1">
                                     <input type="number" v-model="form.plan.transitTime" class="input-round p-2 text-xs w-16 text-center">
@@ -442,7 +443,6 @@
                         });
                     }
                 },
-                // 解決 Draggable 直接綁定 computed 衍生陣列導致卡住、同步失效的 Bug
                 shopCategoryLists() {
                     const categories = ['美妝', '伴手禮', '服飾', '食物', '其他'];
                     const res = {};
@@ -467,7 +467,6 @@
             },
             mounted() {
                 db.ref(DATA_PATH).on('value', snap => { if(snap.exists()) this.dbData = snap.val(); });
-                // 已移除原先會覆蓋固定匯率的 fetch API 呼張，維持穩定的出國換匯設定
             },
             methods: {
                 formatNum(n) { return Math.round(Number(n)).toLocaleString(); },
@@ -479,6 +478,7 @@
                     const rate = item.rate || this.exchangeRate;
                     return item.currency === 'TWD' ? Number(item.amount) : Math.round(Number(item.amount) * rate); 
                 },
+                // 修改這裡：加上 ship 的 Font Awesome 船隻圖示
                 getTransitIcon(t) { return {walk:'fas fa-walking', taxi:'fas fa-taxi', bus:'fas fa-bus', train:'fas fa-train-subway', ship:'fas fa-ship', other:'fas fa-plane'}[t]; },
                 getTransitArray(t) { return t ? t.split(',') : []; },
                 getCategoryIcon(cat) { return { '食物': 'fas fa-utensils', '購物': 'fas fa-shopping-bag', '美妝': 'fas fa-magic', '交通': 'fas fa-bus', '住宿': 'fas fa-bed', '其他': 'fas fa-ellipsis-h' }[cat] || 'fas fa-coins'; },
@@ -500,7 +500,7 @@
                         return { label: cat, value: amount };
                     });
                     chartData.sort((a, b) => b.value - a.value);
-                    const colorMap = { '食物': '#DBA9AB', '購物': '#F2E3E4', '交通': '#6A9B9B', '住宿': '#D1D5DB', '其他': '#9CA3AF' };
+                    const colorMap = { '食物': '#DBA9AB', '購物': '#F2E3E4', '交通': '#6A9B9B', '住宿': '#D1D5DB', '開銷': '#9CA3AF', '其他': '#9CA3AF' };
                     this.chart = new Chart(ctx, {
                         type: 'doughnut',
                         data: {
