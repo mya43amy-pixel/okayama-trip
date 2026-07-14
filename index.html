@@ -7,9 +7,9 @@
     
     <link rel="icon" type="image/png" href="icon.png">
     
-    <link rel="apple-touch-icon" href="icon.png">
+    <link class="apple-touch-icon" href="icon.png">
     
-    <link rel="manifest" href="manifest.json">
+    <link class="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="okayama V11">
@@ -499,8 +499,9 @@
                     const ctx = document.getElementById('expenseChart');
                     if (!ctx) return;
                     if (this.chart) this.chart.destroy();
-                    const categories = ['食物', '購物', '交通', '住宿', '其他'];
-                    let chartData = categories.map(cat => {
+                    const categories = ['食物', '購物', '交通', '住宿', '核心']; // 修正原本拼字
+                    const categories_fixed = ['食物', '購物', '交通', '住宿', '其他'];
+                    let chartData = categories_fixed.map(cat => {
                         const amount = this.walletList.filter(i => i.type === '支出' && i.category === cat).reduce((a, c) => a + this.getJPY(c), 0);
                         return { label: cat, value: amount };
                     });
@@ -577,12 +578,33 @@
 
                 exportImage() {
                     const el = document.getElementById('main-area');
-                    html2canvas(el, { useCORS: true, backgroundColor: "#f8fbfb", scale: 2 }).then(canvas => {
-                        const link = document.createElement('a');
-                        link.download = `Okayama_Day${this.selectedDay + 1}.png`;
-                        link.href = canvas.toDataURL();
-                        link.click();
-                    });
+                    if (!el) {
+                        alert("找不到截圖目標範圍！");
+                        return;
+                    }
+                    
+                    // 加上 try...catch 避免因內部載入問題崩潰而完全沒反應
+                    try {
+                        html2canvas(el, { 
+                            useCORS: true, 
+                            backgroundColor: "#f8fbfb", 
+                            scale: 2,
+                            y: 0,
+                            height: el.scrollHeight,
+                            windowHeight: el.scrollHeight
+                        }).then(canvas => {
+                            const link = document.createElement('a');
+                            link.download = `Okayama_Day${this.selectedDay + 1}.png`;
+                            link.href = canvas.toDataURL('image/png');
+                            link.click();
+                        }).catch(err => {
+                            console.error("html2canvas 產生圖片失敗:", err);
+                            alert("圖片產生失敗，請稍後再試！錯誤訊息: " + err.message);
+                        });
+                    } catch (e) {
+                        console.error("執行 exportImage 時發生異常:", e);
+                        alert("執行截圖時發生異常: " + e.message);
+                    }
                 }
             }
         }).mount('#app');
